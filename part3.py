@@ -14,16 +14,10 @@ def _minimax(state, maximizing_player_id):
       The optimal value of the sub-game starting in state
     """
 
-    #print(state)
-    #print(transposition_table)
-
-    if state in transposition_table:
-        print(state)
-        print(transposition_table[state])
-        return transposition_table[state]
+    if state.to_string() in transposition_table:
+        return transposition_table[state.to_string()]
 
     if state.is_terminal():
-        transposition_table[state] = state.player_return(maximizing_player_id)
         return state.player_return(maximizing_player_id)
 
     player = state.current_player()
@@ -35,7 +29,7 @@ def _minimax(state, maximizing_player_id):
 
     values_children = [_minimax(state.child(action), maximizing_player_id) for action in state.legal_actions()]
     optimal_value = selection(values_children)
-    transposition_table[state] = optimal_value
+    transposition_table[state.to_string()] = optimal_value
     return optimal_value
 
 
@@ -75,8 +69,6 @@ def minimax_search(game,
         state = game.new_initial_state()
     if maximizing_player_id is None:
         maximizing_player_id = state.current_player()
-
-    #transposition_table = {}
     
     v = _minimax(
         state.clone(),
@@ -87,7 +79,7 @@ def minimax_search(game,
 def main(_):
     games_list = pyspiel.registered_names()
     assert "dots_and_boxes" in games_list
-    game_string = "dots_and_boxes(num_rows=2,num_cols=2)"
+    game_string = "dots_and_boxes(num_rows=3,num_cols=2)"
 
     print("Creating game: {}".format(game_string))
     game = pyspiel.load_game(game_string)
