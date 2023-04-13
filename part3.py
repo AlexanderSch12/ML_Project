@@ -68,6 +68,7 @@ def rotate_observation(obs_tensor):
                         rotated_col += 1
                     elif part == 'v':
                         new_part = 'h'
+                        rotated_col -= 1
                     else:
                         new_part = 'c'
                     rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, new_part)] = get_observation(obs_tensor, state, rotated_row, rotated_col, part)
@@ -89,6 +90,7 @@ def _minimax(state, maximizing_player_id):
     print(state)
     print(state.observation_tensor(1))
     r = rotate_observation(state.observation_tensor(1))
+    print(len(r))
     print(r)
     r1 = rotate_observation(r)
     print(r1)
