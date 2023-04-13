@@ -1,7 +1,50 @@
 import pyspiel
 from absl import app
 
+num_cols = 2
+num_rows = 2
+num_cells = (num_rows + 1) * (num_cols + 1)
+num_parts = 3
+
 transposition_table = {}
+
+def part2num(part):
+    p = {'h': 0, 'horizontal': 0,  # Who has set the horizontal line (top of cell)
+         'v': 1, 'vertical':   1,  # Who has set the vertical line (left of cell)
+         'c': 2, 'cell':       2}  # Who has won the cell
+    return p.get(part, part)
+
+
+def state2num(state):
+    s = {'e':  0, 'empty':   0,
+         'p1': 1, 'player1': 1,
+         'p2': 2, 'player2': 2}
+    return s.get(state, state)
+
+
+def num2state(state):
+    s = {0: 'empty', 1: 'player1', 2: 'player2'}
+    return s.get(state, state)
+
+
+def get_observation(obs_tensor, state, row, col, part):
+    state = state2num(state)
+    part = part2num(part)
+    idx =   part \
+          + (row * (num_cols + 1) + col) * num_parts  \
+          + state * (num_parts * num_cells)
+    return obs_tensor[idx]
+
+
+def get_observation_state(obs_tensor, row, col, part, as_str=True):
+    is_state = None
+    for state in range(3):
+        if get_observation(obs_tensor, state, row, col, part) == 1.0:
+            is_state = state
+    if as_str:
+        is_state = num2state(is_state)
+    return is_state
+
 
 def _minimax(state, maximizing_player_id):
     """
@@ -13,6 +56,10 @@ def _minimax(state, maximizing_player_id):
     Returns:
       The optimal value of the sub-game starting in state
     """
+
+    print(state)
+    print(state.observation_tensor())
+    get_observation(state.observation_tensor())
 
     if state.to_string() in transposition_table:
         return transposition_table[state.to_string()]
@@ -79,7 +126,7 @@ def minimax_search(game,
 def main(_):
     games_list = pyspiel.registered_names()
     assert "dots_and_boxes" in games_list
-    game_string = "dots_and_boxes(num_rows=3,num_cols=2)"
+    game_string = "dots_and_boxes(num_rows=" + str(num_rows) + ",num_cols=" + str(num_cols) + ")"
 
     print("Creating game: {}".format(game_string))
     game = pyspiel.load_game(game_string)
