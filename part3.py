@@ -1,8 +1,8 @@
 import pyspiel
 from absl import app
 
-num_cols = 1
-num_rows = 1
+num_cols = 3
+num_rows = 3
 num_cells = (num_rows + 1) * (num_cols + 1)
 num_parts = 3
 
@@ -62,13 +62,11 @@ def rotate_observation(obs_tensor):
             for part in ['h', 'v', 'c']:
                 for state in range(3):
                     rotated_row = col
-                    rotated_col = num_rows - 1 - row
+                    rotated_col = num_rows - row
                     if part == 'h':
                         new_part = 'v'
-                        rotated_col += 1
                     elif part == 'v':
                         new_part = 'h'
-                        rotated_col -= 1
                     else:
                         new_part = 'c'
                     rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, new_part)] = get_observation(obs_tensor, state, rotated_row, rotated_col, part)
@@ -86,23 +84,14 @@ def _minimax(state, maximizing_player_id):
       The optimal value of the sub-game starting in state
     """
 
-    # get_observation_state(state.observation_tensor(),0,0,"h")
-    print(state)
-    print(state.observation_tensor(1))
-    r = rotate_observation(state.observation_tensor(1))
-    print(len(r))
-    print(r)
-    r1 = rotate_observation(r)
-    print(r1)
-    r2 = rotate_observation(r1)
-    print(r2)
-
-    if state.to_string() in transposition_table:
-        return transposition_table[state.to_string()]
-
     if state.is_terminal():
         return state.player_return(maximizing_player_id)
 
+    obs = state.observation_tensor(1)
+    str_obs = str(obs)
+    if str_obs in transposition_table:
+        return transposition_table[str_obs] 
+    
     player = state.current_player()
 
     if player == maximizing_player_id:
@@ -112,7 +101,12 @@ def _minimax(state, maximizing_player_id):
 
     values_children = [_minimax(state.child(action), maximizing_player_id) for action in state.legal_actions()]
     optimal_value = selection(values_children)
-    transposition_table[state.to_string()] = optimal_value
+    transposition_table[str_obs] = optimal_value
+    r = rotate_observation(obs)
+    transposition_table[str(r)] = optimal_value
+    if r != obs:
+        r2 = rotate_observation(r)
+        transposition_table[str(r2)] = optimal_value
     return optimal_value
 
 
