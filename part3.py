@@ -60,11 +60,19 @@ def rotate_observation(obs_tensor):
     for row in range(num_rows + 1):
         for col in range(num_cols + 1):
             for part in ['h', 'v', 'c']:
-                state = get_observation_state(obs_tensor, row, col, part, False)
-                rotated_row = col
-                rotated_col = num_rows - row
-                rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, part)] = 1.0
+                for state in range(3):
+                    rotated_row = col
+                    rotated_col = num_rows - 1 - row
+                    if part == 'h':
+                        new_part = 'v'
+                        rotated_col += 1
+                    elif part == 'v':
+                        new_part = 'h'
+                    else:
+                        new_part = 'c'
+                    rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, new_part)] = get_observation(obs_tensor, state, rotated_row, rotated_col, part)
     return rotated_obs_tensor
+
 
 def _minimax(state, maximizing_player_id):
     """
@@ -80,7 +88,12 @@ def _minimax(state, maximizing_player_id):
     # get_observation_state(state.observation_tensor(),0,0,"h")
     print(state)
     print(state.observation_tensor(1))
-    print(rotate_observation(state.observation_tensor(1)))
+    r = rotate_observation(state.observation_tensor(1))
+    print(r)
+    r1 = rotate_observation(r)
+    print(r1)
+    r2 = rotate_observation(r1)
+    print(r2)
 
     if state.to_string() in transposition_table:
         return transposition_table[state.to_string()]
@@ -163,7 +176,6 @@ def main(_):
 
 if __name__ == "__main__":
     app.run(main)
-
 
 
 
