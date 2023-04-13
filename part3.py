@@ -1,8 +1,8 @@
 import pyspiel
 from absl import app
 
-num_cols = 2
-num_rows = 2
+num_cols = 1
+num_rows = 1
 num_cells = (num_rows + 1) * (num_cols + 1)
 num_parts = 3
 
@@ -46,6 +46,17 @@ def get_observation_state(obs_tensor, row, col, part, as_str=True):
     return is_state
 
 
+def rotate_observation(obs_tensor):
+    rotated_obs_tensor = [0.0] * len(obs_tensor)
+    for row in range(num_rows + 1):
+        for col in range(num_cols + 1):
+            for part in ['h', 'v', 'c']:
+                state = get_observation_state(obs_tensor, row, col, part, False)
+                rotated_row = col
+                rotated_col = num_rows - row
+                rotated_obs_tensor[get_observation(obs_tensor, rotated_row, rotated_col, part)] = 1.0
+    return rotated_obs_tensor
+
 def _minimax(state, maximizing_player_id):
     """
     Implements a min-max algorithm
@@ -57,12 +68,15 @@ def _minimax(state, maximizing_player_id):
       The optimal value of the sub-game starting in state
     """
 
-    print(state)
-    print(state.observation_tensor())
-    get_observation(state.observation_tensor())
+    # get_observation_state(state.observation_tensor(),0,0,"h")
+
 
     if state.to_string() in transposition_table:
         return transposition_table[state.to_string()]
+    else:
+        print(state)
+        print(state.observation_tensor(1))
+        print(rotate_observation(state.observation_tensor(1)))
 
     if state.is_terminal():
         return state.player_return(maximizing_player_id)
@@ -126,7 +140,7 @@ def minimax_search(game,
 def main(_):
     games_list = pyspiel.registered_names()
     assert "dots_and_boxes" in games_list
-    game_string = "dots_and_boxes(num_rows=" + str(num_rows) + ",num_cols=" + str(num_cols) + ")"
+    game_string = f"dots_and_boxes(num_rows={num_rows},num_cols={num_cols})"
 
     print("Creating game: {}".format(game_string))
     game = pyspiel.load_game(game_string)
@@ -142,3 +156,29 @@ def main(_):
 
 if __name__ == "__main__":
     app.run(main)
+
+
+
+
+# ┌╴ ╶┐
+#     
+# └╴ ╶┘
+# [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+
+# ┌───┐
+#     
+# └╴ ╶┘
+# [0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+
+# ┌╴ ╶┐
+#   
+# └───┘
+# [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+
+# ┌╴ ╶┐
+# │    
+# └╴ ╶┘
+# [1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
