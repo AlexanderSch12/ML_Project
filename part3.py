@@ -36,6 +36,15 @@ def get_observation(obs_tensor, state, row, col, part):
     return obs_tensor[idx]
 
 
+def get_observation_index(state, row, col, part):
+    state = state2num(state)
+    part = part2num(part)
+    idx =   part \
+          + (row * (num_cols + 1) + col) * num_parts  \
+          + state * (num_parts * num_cells)
+    return idx
+
+
 def get_observation_state(obs_tensor, row, col, part, as_str=True):
     is_state = None
     for state in range(3):
@@ -54,7 +63,7 @@ def rotate_observation(obs_tensor):
                 state = get_observation_state(obs_tensor, row, col, part, False)
                 rotated_row = col
                 rotated_col = num_rows - row
-                rotated_obs_tensor[get_observation(obs_tensor, rotated_row, rotated_col, part)] = 1.0
+                rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, part)] = 1.0
     return rotated_obs_tensor
 
 def _minimax(state, maximizing_player_id):
@@ -69,14 +78,12 @@ def _minimax(state, maximizing_player_id):
     """
 
     # get_observation_state(state.observation_tensor(),0,0,"h")
-
+    print(state)
+    print(state.observation_tensor(1))
+    print(rotate_observation(state.observation_tensor(1)))
 
     if state.to_string() in transposition_table:
         return transposition_table[state.to_string()]
-    else:
-        print(state)
-        print(state.observation_tensor(1))
-        print(rotate_observation(state.observation_tensor(1)))
 
     if state.is_terminal():
         return state.player_return(maximizing_player_id)
