@@ -1,7 +1,70 @@
 import pyspiel
 from absl import app
 
+num_rows = 2
+num_cols = 2
+num_boxes = num_rows * num_cols
+num_cells = (num_rows + 1) * (num_cols + 1)
+num_parts = 3
+
 transposition_table = {}
+
+def part2num(part):
+    p = {'h': 0, 'horizontal': 0,  # Who has set the horizontal line (top of cell)
+         'v': 1, 'vertical':   1,  # Who has set the vertical line (left of cell)
+         'c': 2, 'cell':       2}  # Who has won the cell
+    return p.get(part, part)
+
+
+def state2num(state):
+    s = {'e':  0, 'empty':   0,
+         'p1': 1, 'player1': 1,
+         'p2': 2, 'player2': 2}
+    return s.get(state, state)
+
+
+def num2state(state):
+    s = {0: 'empty', 1: 'player1', 2: 'player2'}
+    return s.get(state, state)
+
+
+def get_observation(obs_tensor, state, row, col, part):
+    state = state2num(state)
+    part = part2num(part)
+    idx =   part \
+          + (row * (num_cols + 1) + col) * num_parts  \
+          + state * (num_parts * num_cells)
+    return obs_tensor[idx]
+
+
+def get_observation_index(state, row, col, part):
+    state = state2num(state)
+    part = part2num(part)
+    idx =   part \
+          + (row * (num_cols + 1) + col) * num_parts  \
+          + state * (num_parts * num_cells)
+    return idx
+
+
+def get_observation_state(obs_tensor, row, col, part, as_str=True):
+    is_state = None
+    for state in range(3):
+        if get_observation(obs_tensor, state, row, col, part) == 1.0:
+            is_state = state
+    if as_str:
+        is_state = num2state(is_state)
+    return is_state
+
+def rotate_observation(obs_tensor):
+    rotated_obs_tensor = [0.0] * len(obs_tensor)
+    for row in range(num_rows):
+        for col in range(num_cols):
+            for part in ['h', 'v', 'c']:
+                state = get_observation_state(obs_tensor, row, col, part, False)
+                rotated_row = col
+                rotated_col = num_rows - row
+                rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, part)] = 1.0
+    return rotated_obs_tensor
 
 def _minimax(state, maximizing_player_id):
     """
@@ -14,8 +77,11 @@ def _minimax(state, maximizing_player_id):
       The optimal value of the sub-game starting in state
     """
 
-    if state.to_string() in transposition_table:
-        return transposition_table[state.to_string()]
+    dbn_str = dbn_string_boxes(state)
+
+    if dbn_str in transposition_table:
+        print('transposition')
+        return transposition_table[dbn_str]
 
     if state.is_terminal():
         return state.player_return(maximizing_player_id)
@@ -29,7 +95,17 @@ def _minimax(state, maximizing_player_id):
 
     values_children = [_minimax(state.child(action), maximizing_player_id) for action in state.legal_actions()]
     optimal_value = selection(values_children)
-    transposition_table[state.to_string()] = optimal_value
+
+    # add state and symmetries to the transposition table
+    transposition_table[dbn_str] = optimal_value
+    if num_rows  == num_cols:
+        for i in range(3):
+            dbn_str = rotate_90_degrees(dbn_str)
+            transposition_table[dbn_str] = optimal_value
+    else:
+        dbn_str = rotate_180_degrees(dbn_str)
+        transposition_table[dbn_str] = optimal_value
+
     return optimal_value
 
 
@@ -76,10 +152,77 @@ def minimax_search(game,
     return v
 
 
+def dbn_string_boxes(state):
+    """Append the score for each cell to the dbn string. No box (0), player 1 box (1), player 2 box (2).
+    Arguments:
+        state: The current state of the game.
+    Returns:
+        The dbn string appended with the score for each cell
+    """
+    s = ""
+    obs_tensor = state.observation_tensor(0)
+    for row in range(num_rows + 1):
+        for col in range(num_cols):
+            for part in ['h']:
+                obs = get_observation_state(obs_tensor, row, col, part, False)
+                s += str(obs)
+    for row in range(num_rows):
+        for col in range(num_cols + 1):
+            for part in ['v']:
+                obs = get_observation_state(obs_tensor, row, col, part, False)
+                s += str(obs)
+    for row in range(num_rows):
+        for col in range(num_cols):
+            for part in ['c']:
+                obs = get_observation_state(obs_tensor, row, col, part, False)
+                s += str(obs)
+    return s
+
+
+def rotate_90_degrees(dbn_string):
+    # Split the string into horizontal and vertical edges
+    h_edges = dbn_string[:(num_rows + 1) * num_cols]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes:]
+
+    rotated_str = ""
+    # v_edges to h_edges
+    for i in range(int(len(v_edges) / 2)):
+        rotated_str += v_edges[int(len(v_edges) / 2 - 1 - i)]
+        rotated_str += v_edges[int(len(v_edges) - 1 - i)]
+    # h_edges to v_edges
+    for i in range(int(len(h_edges))):
+        if i % 2 != 0:
+            rotated_str += h_edges[i]
+    for i in range(int(len(h_edges))):
+        if i % 2 == 0:
+            rotated_str += h_edges[i]
+    # cells
+    for i in range(num_cols):
+        for j in range(int(len(boxes))):
+            if (j + 1) % (num_cols) == 0:
+                rotated_str += boxes[j - i]
+    return rotated_str
+
+def rotate_180_degrees(dbn_string):
+    # Split the string into horizontal and vertical edges
+    h_edges = dbn_string[:(num_rows + 1) * num_cols]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes:]
+
+    rotated_str = ""
+    # reverse h_edges
+    rotated_str += h_edges[::-1]
+    # reverse v_edges
+    rotated_str += v_edges[::-1]
+    # reverse cells
+    rotated_str += boxes[::-1]
+    return rotated_str
+
 def main(_):
     games_list = pyspiel.registered_names()
     assert "dots_and_boxes" in games_list
-    game_string = "dots_and_boxes(num_rows=3,num_cols=2)"
+    game_string = "dots_and_boxes(num_rows=" + str(num_rows) + ",num_cols=" + str(num_cols) + ")"
 
     print("Creating game: {}".format(game_string))
     game = pyspiel.load_game(game_string)
