@@ -1,7 +1,7 @@
 import pyspiel
 from absl import app
 
-num_rows = 3
+num_rows = 2
 num_cols = 2
 num_boxes = num_rows * num_cols
 num_cells = (num_rows + 1) * (num_cols + 1)
