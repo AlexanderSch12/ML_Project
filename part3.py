@@ -56,6 +56,7 @@ def _minimax(state, maximizing_player_id):
     Returns:
       The optimal value of the sub-game starting in state
     """
+
     dbn_str = dbn_string_boxes(state)
 
     if dbn_str in transposition_table:
