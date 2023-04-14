@@ -1,7 +1,7 @@
 import pyspiel
 from absl import app
 
-num_rows = 2
+num_rows = 3
 num_cols = 2
 num_boxes = num_rows * num_cols
 num_cells = (num_rows + 1) * (num_cols + 1)
@@ -37,15 +37,6 @@ def get_observation(obs_tensor, state, row, col, part):
     return obs_tensor[idx]
 
 
-def get_observation_index(state, row, col, part):
-    state = state2num(state)
-    part = part2num(part)
-    idx =   part \
-          + (row * (num_cols + 1) + col) * num_parts  \
-          + state * (num_parts * num_cells)
-    return idx
-
-
 def get_observation_state(obs_tensor, row, col, part, as_str=True):
     is_state = None
     for state in range(3):
@@ -54,17 +45,6 @@ def get_observation_state(obs_tensor, row, col, part, as_str=True):
     if as_str:
         is_state = num2state(is_state)
     return is_state
-
-def rotate_observation(obs_tensor):
-    rotated_obs_tensor = [0.0] * len(obs_tensor)
-    for row in range(num_rows):
-        for col in range(num_cols):
-            for part in ['h', 'v', 'c']:
-                state = get_observation_state(obs_tensor, row, col, part, False)
-                rotated_row = col
-                rotated_col = num_rows - row
-                rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, part)] = 1.0
-    return rotated_obs_tensor
 
 def _minimax(state, maximizing_player_id):
     """
@@ -76,11 +56,9 @@ def _minimax(state, maximizing_player_id):
     Returns:
       The optimal value of the sub-game starting in state
     """
-
     dbn_str = dbn_string_boxes(state)
 
     if dbn_str in transposition_table:
-        print('transposition')
         return transposition_table[dbn_str]
 
     if state.is_terminal():
@@ -197,12 +175,13 @@ def rotate_90_degrees(dbn_string):
     for i in range(int(len(h_edges))):
         if i % 2 == 0:
             rotated_str += h_edges[i]
-    # cells
+    # boxes
     for i in range(num_cols):
         for j in range(int(len(boxes))):
             if (j + 1) % (num_cols) == 0:
                 rotated_str += boxes[j - i]
     return rotated_str
+
 
 def rotate_180_degrees(dbn_string):
     # Split the string into horizontal and vertical edges
@@ -215,9 +194,10 @@ def rotate_180_degrees(dbn_string):
     rotated_str += h_edges[::-1]
     # reverse v_edges
     rotated_str += v_edges[::-1]
-    # reverse cells
+    # reverse boxes
     rotated_str += boxes[::-1]
     return rotated_str
+
 
 def main(_):
     games_list = pyspiel.registered_names()
