@@ -69,7 +69,7 @@ def rotate_observation(obs_tensor):
                         new_part = 'h'
                     else:
                         new_part = 'c'
-                    rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, new_part)] = get_observation(obs_tensor, state, rotated_row, rotated_col, part)
+                    rotated_obs_tensor[get_observation_index(state, rotated_row, rotated_col, new_part)] = get_observation(obs_tensor, state, row, col, part)
     return rotated_obs_tensor
 
 
@@ -83,6 +83,20 @@ def _minimax(state, maximizing_player_id):
     Returns:
       The optimal value of the sub-game starting in state
     """
+
+
+
+    # print(state)
+    # print(state.observation_tensor(1))
+    # r1 = rotate_observation(state.observation_tensor(1))
+    # r2 = rotate_observation(r1)
+    # r3 = rotate_observation(r2)
+    # r4 = rotate_observation(r3)
+    # print(r1)
+    # print(r2)
+    # print(r3)
+    # print(r4)
+
 
     if state.is_terminal():
         return state.player_return(maximizing_player_id)
