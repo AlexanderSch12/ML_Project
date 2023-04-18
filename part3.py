@@ -1,7 +1,7 @@
 import pyspiel
 from absl import app
 
-num_rows = 2
+num_rows = 3
 num_cols = 2
 num_boxes = num_rows * num_cols
 num_cells = (num_rows + 1) * (num_cols + 1)
@@ -77,13 +77,13 @@ def _minimax(state, maximizing_player_id):
 
     # add state and symmetries to the transposition table
     transposition_table[dbn_str] = optimal_value
+    transposition_table[mirror_h(dbn_str)] = optimal_value
+    transposition_table[mirror_v(dbn_str)] = optimal_value
     if num_rows  == num_cols:
         for i in range(3):
-            dbn_str = rotate_90_degrees(dbn_str)
-            transposition_table[dbn_str] = optimal_value
+            transposition_table[rotate_90_degrees(dbn_str)] = optimal_value
     else:
-        dbn_str = rotate_180_degrees(dbn_str)
-        transposition_table[dbn_str] = optimal_value
+        transposition_table[rotate_180_degrees(dbn_str)] = optimal_value
 
     return optimal_value
 
@@ -198,6 +198,48 @@ def rotate_180_degrees(dbn_string):
     # reverse boxes
     rotated_str += boxes[::-1]
     return rotated_str
+
+def mirror_h(dbn_string):
+    # Split the string into horizontal and vertical edges
+    h_edges = dbn_string[:(num_rows + 1) * num_cols]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes:]
+
+    h_mirrored_str = ""
+    # mirror h_edges
+    for i in range(num_rows + 1):
+        for j in range(num_cols):
+            h_mirrored_str += h_edges[(i + 1) * num_cols - j - 1]
+    # mirror v_edges
+    for i in range(num_rows):
+        for j in range(num_cols + 1):
+            h_mirrored_str += v_edges[(i + 1) * (num_cols + 1) - j - 1]
+    # mirror boxes
+    for i in range(num_rows):
+        for j in range(num_cols):
+            h_mirrored_str += boxes[(i + 1) * num_cols - j - 1]
+    return h_mirrored_str
+
+def mirror_v(dbn_string):
+    # Split the string into horizontal and vertical edges
+    h_edges = dbn_string[:(num_rows + 1) * num_cols]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes:]
+
+    v_mirrored_str = ""
+    # mirror h_edges
+    for i in range(num_rows + 1):
+        for j in range(num_cols):
+            v_mirrored_str += h_edges[(num_rows - i) * num_cols + j]
+    # mirror v_edges
+    for i in range(num_rows):
+        for j in range(num_cols + 1):
+            v_mirrored_str += v_edges[(num_rows - i - 1) * (num_cols + 1) + j]
+    # mirror boxes
+    for i in range(num_rows):
+        for j in range(num_cols):
+            v_mirrored_str += boxes[(num_rows - i - 1) * num_cols + j]
+    return v_mirrored_str
 
 
 def main(_):
