@@ -1,97 +1,7 @@
-# import pyspiel
-# from absl import app
-
-
-# def _minimax(state, maximizing_player_id):
-#     """
-#     Implements a min-max algorithm
-#     Arguments:
-#       state: The current state node of the game.
-#       maximizing_player_id: The id of the MAX player. The other player is assumed
-#         to be MIN.
-#     Returns:
-#       The optimal value of the sub-game starting in state
-#     """
-
-#     if state.is_terminal():
-#         return state.player_return(maximizing_player_id)
-
-#     player = state.current_player()
-#     if player == maximizing_player_id:
-#         selection = max
-#     else:
-#         selection = min
-#     values_children = [_minimax(state.child(action), maximizing_player_id) for action in state.legal_actions()]
-#     return selection(values_children)
-
-
-# def minimax_search(game,
-#                    state=None,
-#                    maximizing_player_id=None,
-#                    state_to_key=lambda state: state):
-#     """Solves deterministic, 2-players, perfect-information 0-sum game.
-#     For small games only! Please use keyword arguments for optional arguments.
-#     Arguments:
-#       game: The game to analyze, as returned by `load_game`.
-#       state: The state to run from.  If none is specified, then the initial state is assumed.
-#       maximizing_player_id: The id of the MAX player. The other player is assumed
-#         to be MIN. The default (None) will suppose the player at the root to be
-#         the MAX player.
-#     Returns:
-#       The value of the game for the maximizing player when both player play optimally.
-#     """
-#     game_info = game.get_type()
-
-#     if game.num_players() != 2:
-#         raise ValueError("Game must be a 2-player game")
-#     if game_info.chance_mode != pyspiel.GameType.ChanceMode.DETERMINISTIC:
-#         raise ValueError("The game must be a Deterministic one, not {}".format(
-#             game.chance_mode))
-#     if game_info.information != pyspiel.GameType.Information.PERFECT_INFORMATION:
-#         raise ValueError(
-#             "The game must be a perfect information one, not {}".format(
-#                 game.information))
-#     if game_info.dynamics != pyspiel.GameType.Dynamics.SEQUENTIAL:
-#         raise ValueError("The game must be turn-based, not {}".format(
-#             game.dynamics))
-#     if game_info.utility != pyspiel.GameType.Utility.ZERO_SUM:
-#         raise ValueError("The game must be 0-sum, not {}".format(game.utility))
-
-#     if state is None:
-#         state = game.new_initial_state()
-#     if maximizing_player_id is None:
-#         maximizing_player_id = state.current_player()
-#     v = _minimax(
-#         state.clone(),
-#         maximizing_player_id=maximizing_player_id)
-#     return v
-
-
-# def main(_):
-#     games_list = pyspiel.registered_names()
-#     assert "dots_and_boxes" in games_list
-#     game_string = "dots_and_boxes(num_rows=1,num_cols=1)"
-
-#     print("Creating game: {}".format(game_string))
-#     game = pyspiel.load_game(game_string)
-
-#     value = minimax_search(game)
-
-#     if value == 0:
-#         print("It's a draw")
-#     else:
-#         winning_player = 1 if value == 1 else 2
-#         print(f"Player {winning_player} wins.")
-
-
-# if __name__ == "__main__":
-#     app.run(main)
-
-
 import pyspiel
 from absl import app
 
-num_rows = 2
+num_rows = 3
 num_cols = 3
 num_boxes = num_rows * num_cols
 num_cells = (num_rows + 1) * (num_cols + 1)
@@ -159,33 +69,37 @@ def _minimax(state, maximizing_player_id, alpha, beta):
 
     if player == maximizing_player_id:
         selection = max
-        optimal_value = float('-inf')
-        for action in state.legal_actions():
-            value = _minimax(state.child(action), maximizing_player_id, alpha, beta)
-            optimal_value = selection(optimal_value, value)
-            alpha = max(alpha, value)
-            if beta <= alpha:
-                break
+        # optimal_value = float('-inf')
+        # for action in state.legal_actions():
+        #     value = _minimax(state.child(action), maximizing_player_id, alpha, beta)
+        #     optimal_value = selection(optimal_value, value)
+        #     alpha = max(alpha, value)
+        #     if beta <= alpha:
+        #         break
     else:
         selection = min
-        optimal_value = float('inf')
-        for action in state.legal_actions():
-            value = _minimax(state.child(action), maximizing_player_id, alpha, beta)
-            optimal_value = selection(optimal_value, value)
-            beta = min(beta, value)
-            if beta <= alpha:
-                break
+        # optimal_value = float('inf')
+        # for action in state.legal_actions():
+        #     value = _minimax(state.child(action), maximizing_player_id, alpha, beta)
+        #     optimal_value = selection(optimal_value, value)
+        #     beta = min(beta, value)
+        #     if beta <= alpha:
+        #         break
 
-    # values_children = [_minimax(state.child(action), maximizing_player_id) for action in state.legal_actions()]
-    # optimal_value = selection(values_children)
+    values_children = [_minimax(state.child(action), maximizing_player_id, alpha, beta) for action in state.legal_actions()]
+    optimal_value = selection(values_children)
 
     # add state and symmetries to the transposition table
     transposition_table[dbn_str] = optimal_value
     transposition_table[mirror_h(dbn_str)] = optimal_value
     transposition_table[mirror_v(dbn_str)] = optimal_value
     if num_rows  == num_cols:
-        for i in range(3):
-            transposition_table[rotate_90_degrees(dbn_str)] = optimal_value
+            r1 = rotate_90_degrees(dbn_str)
+            r2 = rotate_90_degrees(r1)
+            r3 = rotate_90_degrees(r2)
+            transposition_table[r1] = optimal_value
+            transposition_table[r2] = optimal_value
+            transposition_table[r3] = optimal_value
     else:
         transposition_table[rotate_180_degrees(dbn_str)] = optimal_value
 
@@ -244,24 +158,24 @@ def dbn_string_boxes(state):
     Returns:
         The dbn string appended with the score for each cell
     """
-    s = ""
+    dbn_str = state.dbn_string()
     obs_tensor = state.observation_tensor(0)
-    for row in range(num_rows + 1):
-        for col in range(num_cols):
-            for part in ['h']:
-                obs = get_observation_state(obs_tensor, row, col, part, False)
-                s += str(obs)
-    for row in range(num_rows):
-        for col in range(num_cols + 1):
-            for part in ['v']:
-                obs = get_observation_state(obs_tensor, row, col, part, False)
-                s += str(obs)
+    # for row in range(num_rows + 1):
+    #     for col in range(num_cols):
+    #         for part in ['h']:
+    #             obs = get_observation_state(obs_tensor, row, col, part, False)
+    #             s += str(obs)
+    # for row in range(num_rows):
+    #     for col in range(num_cols + 1):
+    #         for part in ['v']:
+    #             obs = get_observation_state(obs_tensor, row, col, part, False)
+    #             s += str(obs)
     for row in range(num_rows):
         for col in range(num_cols):
             for part in ['c']:
                 obs = get_observation_state(obs_tensor, row, col, part, False)
-                s += str(obs)
-    return s
+                dbn_str += str(obs)
+    return dbn_str
 
 
 def rotate_90_degrees(dbn_string):
