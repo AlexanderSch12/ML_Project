@@ -1,8 +1,10 @@
 import pyspiel
+import time
 from absl import app
+import matplotlib.pyplot as plt
 
-num_rows = 3
-num_cols = 3
+num_rows = 1
+num_cols = 2
 num_boxes = num_rows * num_cols
 num_cells = (num_rows + 1) * (num_cols + 1)
 num_parts = 3
@@ -91,17 +93,17 @@ def _minimax(state, maximizing_player_id, alpha, beta):
 
     # add state and symmetries to the transposition table
     transposition_table[dbn_str] = optimal_value
-    transposition_table[mirror_h(dbn_str)] = optimal_value
-    transposition_table[mirror_v(dbn_str)] = optimal_value
-    if num_rows  == num_cols:
-            r1 = rotate_90_degrees(dbn_str)
-            r2 = rotate_90_degrees(r1)
-            r3 = rotate_90_degrees(r2)
-            transposition_table[r1] = optimal_value
-            transposition_table[r2] = optimal_value
-            transposition_table[r3] = optimal_value
-    else:
-        transposition_table[rotate_180_degrees(dbn_str)] = optimal_value
+    # transposition_table[mirror_h(dbn_str)] = optimal_value
+    # transposition_table[mirror_v(dbn_str)] = optimal_value
+    # if num_rows  == num_cols:
+    #         r1 = rotate_90_degrees(dbn_str)
+    #         r2 = rotate_90_degrees(r1)
+    #         r3 = rotate_90_degrees(r2)
+    #         transposition_table[r1] = optimal_value
+    #         transposition_table[r2] = optimal_value
+    #         transposition_table[r3] = optimal_value
+    # else:
+    #     transposition_table[rotate_180_degrees(dbn_str)] = optimal_value
 
     return optimal_value
 
@@ -261,6 +263,15 @@ def mirror_v(dbn_string):
             v_mirrored_str += boxes[(num_rows - i - 1) * num_cols + j]
     return v_mirrored_str
 
+def plot_performance():
+    naive = [0.230, 28.426]
+    naive_y = [1, 2]
+    transpos = [0.312, 4.565, 489.024, 33269.668]
+    transpos_sym = [0.346, 6.585, 152.470, 8836.616]
+
+    plt.plot(naive, naive_y)
+    plt.show()
+
 
 def main(_):
     games_list = pyspiel.registered_names()
@@ -270,7 +281,13 @@ def main(_):
     print("Creating game: {}".format(game_string))
     game = pyspiel.load_game(game_string)
 
+    start = time.time()
     value = minimax_search(game)
+    end = time.time()
+
+    print('time: ' + str((end - start) * 1000) + 'ms')
+    print(str(len(transposition_table)))
+    plot_performance()
 
     if value == 0:
         print("It's a draw")
