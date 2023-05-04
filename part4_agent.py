@@ -7,13 +7,17 @@ Created by Pieter Robberechts, Wannes Meert.
 Copyright (c) 2022 KU Leuven. All rights reserved.
 """
 
-import sys
-import argparse
-import logging
+import os
 import random
+import sys
+import importlib.util
+import logging
+from absl import app
+from absl import flags
 import numpy as np
+from pathlib import Path
 import pyspiel
-from open_spiel.python.algorithms import evaluate_bots
+import tensorflow.compat.v1 as tf
 
 from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import dqn
@@ -23,6 +27,29 @@ from open_spiel.python.algorithms import random_agent
 logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
 
 
+FLAGS = flags.FLAGS
+
+# Training parameters
+flags.DEFINE_string("checkpoint_dir", "/tmp/dqn_dnb_model",
+                    "Directory to save/load the agent models.")
+flags.DEFINE_integer(
+    "save_every", int(1e4),
+    "Episode frequency at which the DQN agent models are saved.")
+flags.DEFINE_integer("num_train_episodes", int(1e6),
+                     "Number of training episodes.")
+flags.DEFINE_integer(
+    "eval_every", 1000,
+    "Episode frequency at which the DQN agents are evaluated.")
+
+# DQN model hyper-parameters
+flags.DEFINE_integer("hidden_layers_sizes", 64,
+                  "Number of hidden units in the Q-Network MLP.")
+flags.DEFINE_integer("replay_buffer_capacity", int(1e5),
+                     "Size of the replay buffer.")
+flags.DEFINE_integer("batch_size", 32,
+                     "Number of transitions to sample at each learning step.")
+
+
 def get_agent_for_tournament(player_id):
     """Change this function to initialize your agent.
     This function is called by the tournament code at the beginning of the
@@ -30,8 +57,8 @@ def get_agent_for_tournament(player_id):
     :param player_id: The integer id of the player for this bot, e.g. `0` if
         acting as the first player.
     """
-    my_player = Agent(player_id)
-    return my_player
+    agent = Agent(player_id)
+    return agent
 
 
 class Agent(pyspiel.Bot):
@@ -45,12 +72,37 @@ class Agent(pyspiel.Bot):
         """
         pyspiel.Bot.__init__(self)
         self.player_id = player_id
+        self.game_string = "dots_and_boxes(num_rows=4,num_cols=4)"
+
+        env_configs = {}
+        self.env = rl_environment.Environment(self.game_string, **env_configs)
+        info_state_size = self.env.observation_spec()["info_state"][0]
+        num_actions = self.env.action_spec()["num_actions"]
+
+        sess = tf.Session()
+        self.agent = dqn.DQN(
+            session=sess,
+            player_id=player_id,
+            state_representation_size=info_state_size,
+            num_actions=num_actions,
+            hidden_layers_sizes=FLAGS.hidden_layers_sizes,
+            replay_buffer_capacity=FLAGS.replay_buffer_capacity,
+            batch_size=FLAGS.batch_size)
+
+        if self.agent.has_checkpoint("./dqn_dnb_model"):
+            print("checkpoint found!")
+        self.agent.restore("./dqn_dnb_model")
+        sess.run(tf.global_variables_initializer())
+
 
     def restart_at(self, state):
         """Starting a new game in the given state.
         :param state: The initial state of the game.
         """
-        pass
+        # self.env.set_state(state)
+        self.game = state.get_game()
+        self.env.reset()
+
 
     def inform_action(self, state, player_id, action):
         """Let the bot know of the other agent's actions.
@@ -58,30 +110,87 @@ class Agent(pyspiel.Bot):
         :param player_id: The ID of the player that executed an action.
         :param action: The action which the player executed.
         """
-        pass
+        self.env.step([action])
 
+        
     def step(self, state):
         """Returns the selected action in the given state.
         :param state: The current state of the game.
         :returns: The selected action from the legal actions, or
             `pyspiel.INVALID_ACTION` if there are no legal actions available.
         """
-        # Plays random action, change with your best strategy
-        legal_actions = state.legal_actions()
-        rand_idx = random.randint(0, len(legal_actions) - 1)
-        action = legal_actions[rand_idx]
-        return action
+        # self.env.set_state(state)
+        time_step = self.env.get_time_step()
+        if not time_step.last():
+            agent_output = self.agent.step(time_step, is_evaluation=True)
+            self.env.step([agent_output.action])
+        else:
+            agent_output = self.agent.step(time_step, is_evaluation=True)
 
+        return agent_output.action
+
+
+def evaluate_bots(state, bots, rng):
+  """Plays bots against each other, returns terminal utility for each bot."""
+  for bot in bots:
+    bot.restart_at(state)
+  print(state)
+  while not state.is_terminal():
+    current_player = state.current_player()
+    print("Move by player: " + str(current_player))
+    action = bots[current_player].step(state)
+    for i, bot in enumerate(bots):
+        if i != current_player:
+            bot.inform_action(state, current_player, action)
+    state.apply_action(action)
+    print(state)
+  return state.returns()
+
+
+class UniformRandomBot(pyspiel.Bot):
+
+    def __init__(self, player_id, rng):
+        pyspiel.Bot.__init__(self)
+        self._player_id = player_id
+        self._rng = rng
+
+    def inform_action(self, state, player_id, action):
+        pass
+
+    def restart_at(self, state):
+        pass
+
+    def player_id(self):
+        return self._player_id
+
+    def provides_policy(self):
+        return True
+
+    def step_with_policy(self, state):
+        legal_actions = state.legal_actions(self._player_id)
+        if not legal_actions:
+            return [], pyspiel.INVALID_ACTION
+        p = 1 / len(legal_actions)
+        policy = [(action, p) for action in legal_actions]
+        action = self._rng.choice(legal_actions)
+        return policy, action
+
+    def step(self, state):
+        return self.step_with_policy(state)[1]
+  
 
 def test_api_calls():
     """This method calls a number of API calls that are required for the
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dotsandboxes(num_rows=5,num_cols=5)")
+        "dots_and_boxes(num_rows=2,num_cols=2)")
     game = pyspiel.load_game(dotsandboxes_game_string)
-    bots = [get_agent_for_tournament(player_id) for player_id in [0,1]]
-    returns = evaluate_bots.evaluate_bots(game.new_initial_state(), bots, np.random)
+    logger.info("Loading the agents")
+    bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
+    returns = evaluate_bots(game.new_initial_state(), bots, np.random)
+    print("-----------------------------------------------")
+    print(returns)
     assert len(returns) == 2
     assert isinstance(returns[0], float)
     assert isinstance(returns[1], float)
@@ -89,20 +198,8 @@ def test_api_calls():
 
 
 def main(argv=None):
-
-    game = "dots_and_boxes"
-    num_players = 2
-
-    env_configs = {"columns": 5, "rows": 5}
-    env = rl_environment.Environment(game, **env_configs)
-    info_state_size = env.observation_spec()["info_state"][0]
-    num_actions = env.action_spec()["num_actions"]
-
-    print(info_state_size)
-    print(num_actions)
-
     test_api_calls()
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    app.run(main)
