@@ -17,10 +17,10 @@ from absl import flags
 import numpy as np
 from pathlib import Path
 import pyspiel
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 
 from open_spiel.python import rl_environment
-from open_spiel.python.algorithms import dqn
+from open_spiel.python.pytorch import dqn
 from open_spiel.python.algorithms import random_agent
 
 
@@ -79,9 +79,7 @@ class Agent(pyspiel.Bot):
         info_state_size = self.env.observation_spec()["info_state"][0]
         num_actions = self.env.action_spec()["num_actions"]
 
-        sess = tf.Session()
         self.agent = dqn.DQN(
-            session=sess,
             player_id=player_id,
             state_representation_size=info_state_size,
             num_actions=num_actions,
@@ -91,8 +89,7 @@ class Agent(pyspiel.Bot):
 
         if self.agent.has_checkpoint("./dqn_dnb_model"):
             print("checkpoint found!")
-        self.agent.restore("./dqn_dnb_model")
-        sess.run(tf.global_variables_initializer())
+        self.agent.load("./dqn_dnb_model")
 
 
     def restart_at(self, state):

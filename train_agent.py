@@ -14,10 +14,9 @@ from absl import flags
 
 import numpy as np
 import pyspiel
-import tensorflow.compat.v1 as tf
+from open_spiel.python.pytorch import dqn
 
 from open_spiel.python import rl_environment
-from open_spiel.python.algorithms import dqn
 from open_spiel.python.algorithms import random_agent
 from open_spiel.python.algorithms import evaluate_bots
 
@@ -25,7 +24,7 @@ from open_spiel.python.algorithms import evaluate_bots
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model",
+flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model_2x2",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e4),
@@ -73,7 +72,7 @@ def eval_against_random_bots(env, trained_agents, random_agents, num_episodes):
 
 
 def main(argv=None):
-  game_string = "dots_and_boxes(num_rows=7,num_cols=7)"
+  game_string = "dots_and_boxes(num_rows=2,num_cols=2)"
   num_players = 2
 
   env_configs = {}
@@ -87,37 +86,34 @@ def main(argv=None):
     for idx in range(num_players)
   ]
 
-  with tf.Session() as sess:
-    agents = [
-      dqn.DQN(
-        session=sess,
-        player_id=idx,
-        state_representation_size=info_state_size,
-        num_actions=num_actions,
-        hidden_layers_sizes=FLAGS.hidden_layers_sizes,
-        replay_buffer_capacity=FLAGS.replay_buffer_capacity,
-        batch_size=FLAGS.batch_size) for idx in range(num_players)
-    ]   
-    sess.run(tf.global_variables_initializer())
+  agents = [
+    dqn.DQN(
+      player_id=idx,
+      state_representation_size=info_state_size,
+      num_actions=num_actions,
+      hidden_layers_sizes=FLAGS.hidden_layers_sizes,
+      replay_buffer_capacity=FLAGS.replay_buffer_capacity,
+      batch_size=FLAGS.batch_size) for idx in range(num_players)
+  ]   
 
-    for ep in range(FLAGS.num_train_episodes):
-          if (ep + 1) % FLAGS.eval_every == 0:
-            r_mean = eval_against_random_bots(env, agents, random_agents, 1000)
-            logging.info("[%s] Mean episode rewards %s", ep + 1, r_mean)
-          if (ep + 1) % FLAGS.save_every == 0:
-            for agent in agents:
-              agent.save(FLAGS.checkpoint_dir)
-
-          time_step = env.reset()
-          while not time_step.last():
-            player_id = time_step.observations["current_player"]
-            agent_output = agents[player_id].step(time_step)
-            action_list = [agent_output.action]
-            time_step = env.step(action_list)
-
-          # Episode is over, step all agents with final info state.
+  for ep in range(FLAGS.num_train_episodes):
+        if (ep + 1) % FLAGS.eval_every == 0:
+          r_mean = eval_against_random_bots(env, agents, random_agents, 1000)
+          logging.info("[%s] Mean episode rewards %s", ep + 1, r_mean)
+        if (ep + 1) % FLAGS.save_every == 0:
           for agent in agents:
-            agent.step(time_step)
+            agent.save(FLAGS.checkpoint_dir)
+
+        time_step = env.reset()
+        while not time_step.last():
+          player_id = time_step.observations["current_player"]
+          agent_output = agents[player_id].step(time_step)
+          action_list = [agent_output.action]
+          time_step = env.step(action_list)
+
+        # Episode is over, step all agents with final info state.
+        for agent in agents:
+          agent.step(time_step)
 
 
 if __name__ == "__main__":
