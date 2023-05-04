@@ -73,7 +73,7 @@ def eval_against_random_bots(env, trained_agents, random_agents, num_episodes):
 
 
 def main(argv=None):
-  game_string = "dots_and_boxes(num_rows=4,num_cols=4)"
+  game_string = "dots_and_boxes(num_rows=7,num_cols=7)"
   num_players = 2
 
   env_configs = {}
