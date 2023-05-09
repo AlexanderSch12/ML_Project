@@ -74,13 +74,6 @@ class Agent(pyspiel.Bot):
         pyspiel.Bot.__init__(self)
         self.player_id = player_id
 
-        # create env for real game size
-        self.game_string = "dots_and_boxes(num_rows=4,num_cols=4)"
-        env_configs = {}
-        self.env = rl_environment.Environment(self.game_string, **env_configs)
-        info_state_size = self.env.observation_spec()["info_state"][0]
-        num_actions = self.env.action_spec()["num_actions"]
-
         # create env for trained 15x15 game size
         self.game_string_trained = "dots_and_boxes(num_rows=15,num_cols=15)"
         env_configs_trained = {}
@@ -88,15 +81,11 @@ class Agent(pyspiel.Bot):
         info_state_size_trained = self.env_trained.observation_spec()["info_state"][0]
         num_actions_trained = self.env_trained.action_spec()["num_actions"]
 
-        # TODO create illegal action representation based on size of real board an give it to the DQN agent
-        illegal_actions = []
-
         # create trained 15x15 agent
         self.agent = DQN(
             player_id=player_id,
             state_representation_size=info_state_size_trained,
             num_actions=num_actions_trained,
-            illegal_actions=illegal_actions,
             hidden_layers_sizes=FLAGS.hidden_layers_sizes,
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
@@ -112,7 +101,24 @@ class Agent(pyspiel.Bot):
         """
         # self.env.set_state(state)
         self.game = state.get_game()
-        self.env.reset()
+
+        env_configs_trained = {}
+        self.env = rl_environment.Environment(self.game, **env_configs_trained)
+        info_state = self.env.observation_spec()["info_state"][0]
+        num_actions = self.env.action_spec()["num_actions"]
+
+        # TODO create illegal action representation based on size of real board an give it to the DQN agent
+        illegal_actions = []
+
+        self.agent = DQN(
+            player_id=self.player_id,
+            state_representation_size=info_state,
+            num_actions=num_actions,
+            illegal_actions=illegal_actions,
+            hidden_layers_sizes=FLAGS.hidden_layers_sizes,
+            replay_buffer_capacity=FLAGS.replay_buffer_capacity,
+            batch_size=FLAGS.batch_size)
+        
         self.env_trained.reset()
 
 
