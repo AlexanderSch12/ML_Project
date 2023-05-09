@@ -97,20 +97,12 @@ class Agent(pyspiel.Bot):
         """Starting a new game in the given state.
         :param state: The initial state of the game.
         """
-        # self.env.set_state(state)
         self.game = state.get_game()
 
         env_configs_trained = {}
         self.env = rl_environment.Environment(self.game, **env_configs_trained)
         info_state = self.env.observation_spec()["info_state"][0]
         num_actions = self.env.action_spec()["num_actions"]
-
-        # TODO create illegal action representation based on size of real board an give it to the DQN agent
-        illegal_actions = []
-
-        # No real agent needed, only real env
-
-        # TODO: setter for illegal actions for trained_agent
         
         self.env_trained.reset()
 
@@ -136,27 +128,26 @@ class Agent(pyspiel.Bot):
         :returns: The selected action from the legal actions, or
             `pyspiel.INVALID_ACTION` if there are no legal actions available.
         """
-        # self.env.set_state(state)
         time_step_trained = self.env_trained.get_time_step()
         time_step = self.env.get_time_step()
         if not time_step.last():
             # Get legal_actions for real board
             legal_actions = time_step.observations["legal_actions"][self.player_id]
 
-            # Set legal_actions for the trained agent to use
-            self.env_trained.set_legal_actions(legal_actions)
-
             # Trained agent takes step using only legal_actions
-            # TODO: Modify agent.step() to only use legal_actions 
-            trained_agent_output = self.trained_agent.step(time_step_trained, is_evaluation=True)
+            trained_agent_output = self.trained_agent.step(time_step_trained, legal_actions ,is_evaluation=True)
 
             # Apply action to env_trained and env
             self.env_trained.step([trained_agent_output.action])
             self.env.step([trained_agent_output.action])
         else:
-            agent_output = self.agent.step(time_step, is_evaluation=True)
+            # Get legal_actions for real board
+            legal_actions = time_step.observations["legal_actions"][self.player_id]
 
-        return agent_output.action
+            # Trained agent takes step using only legal_actions
+            trained_agent_output = self.trained_agent.step(time_step_trained, legal_actions ,is_evaluation=True)
+
+        return trained_agent_output.action
 
 
 def evaluate_bots(state, bots, rng):

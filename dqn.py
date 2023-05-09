@@ -139,7 +139,7 @@ class DQN(rl_agent.AbstractAgent):
 
     self.player_id = player_id
     self._num_actions = num_actions
-    self.illegal_actions = illegal_actions
+    # self.illegal_actions = illegal_actions
     if isinstance(hidden_layers_sizes, int):
       hidden_layers_sizes = [hidden_layers_sizes]
     self._layer_sizes = hidden_layers_sizes
@@ -189,7 +189,7 @@ class DQN(rl_agent.AbstractAgent):
     else:
       raise ValueError("Not implemented, choose from 'adam' and 'sgd'.")
 
-  def step(self, time_step, is_evaluation=False, add_transition_record=True):
+  def step(self, time_step, legal_actions, is_evaluation=False, add_transition_record=True):
     """Returns the action to be taken and updates the Q-network if needed.
 
     Args:
@@ -206,8 +206,8 @@ class DQN(rl_agent.AbstractAgent):
         time_step.is_simultaneous_move() or
         self.player_id == time_step.current_player()):
       info_state = time_step.observations["info_state"][self.player_id]
-      legal_actions = time_step.observations["legal_actions"][self.player_id]
-      legal_actions = np.setdiff1d(legal_actions,self.illegal_actions)
+      # legal_actions = time_step.observations["legal_actions"][self.player_id]
+      # legal_actions = np.setdiff1d(legal_actions,self.illegal_actions)
       epsilon = self._get_epsilon(is_evaluation)
       action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon)
     else:
