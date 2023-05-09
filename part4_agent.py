@@ -82,7 +82,7 @@ class Agent(pyspiel.Bot):
         num_actions_trained = self.env_trained.action_spec()["num_actions"]
 
         # create trained 15x15 agent
-        self.agent = DQN(
+        self.trained_agent = DQN(
             player_id=player_id,
             state_representation_size=info_state_size_trained,
             num_actions=num_actions_trained,
@@ -90,8 +90,6 @@ class Agent(pyspiel.Bot):
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
 
-        if self.agent.has_checkpoint("./dqn_dnb_model"):
-            print("checkpoint found!")
         self.agent.load("./dqn_dnb_model")
 
 
@@ -110,14 +108,9 @@ class Agent(pyspiel.Bot):
         # TODO create illegal action representation based on size of real board an give it to the DQN agent
         illegal_actions = []
 
-        self.agent = DQN(
-            player_id=self.player_id,
-            state_representation_size=info_state,
-            num_actions=num_actions,
-            illegal_actions=illegal_actions,
-            hidden_layers_sizes=FLAGS.hidden_layers_sizes,
-            replay_buffer_capacity=FLAGS.replay_buffer_capacity,
-            batch_size=FLAGS.batch_size)
+        # No real agent needed, only real env
+
+        # TODO: setter for illegal actions for trained_agent
         
         self.env_trained.reset()
 
@@ -132,6 +125,8 @@ class Agent(pyspiel.Bot):
         self.env.step([action])
 
         # inform 15x15 size environmnet of action
+        self.env_trained.step([action])
+
         # TODO convert action and infrom env_trained
 
         
@@ -142,13 +137,22 @@ class Agent(pyspiel.Bot):
             `pyspiel.INVALID_ACTION` if there are no legal actions available.
         """
         # self.env.set_state(state)
+        time_step_trained = self.env_trained.get_time_step()
         time_step = self.env.get_time_step()
         if not time_step.last():
-            agent_output = self.agent.step(time_step, is_evaluation=True)
-            # TODO convert agent_output back to real size board action and apply to env
+            # Get legal_actions for real board
+            legal_actions = time_step.observations["legal_actions"][self.player_id]
 
-            # apply action to env_trained
-            self.env_trained.step([agent_output.action])
+            # Set legal_actions for the trained agent to use
+            self.env_trained.set_legal_actions(legal_actions)
+
+            # Trained agent takes step using only legal_actions
+            # TODO: Modify agent.step() to only use legal_actions 
+            trained_agent_output = self.trained_agent.step(time_step_trained, is_evaluation=True)
+
+            # Apply action to env_trained and env
+            self.env_trained.step([trained_agent_output.action])
+            self.env.step([trained_agent_output.action])
         else:
             agent_output = self.agent.step(time_step, is_evaluation=True)
 

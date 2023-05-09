@@ -117,7 +117,6 @@ class DQN(rl_agent.AbstractAgent):
                player_id,
                state_representation_size,
                num_actions,
-               illegal_actions=None,
                hidden_layers_sizes=128,
                replay_buffer_capacity=10000,
                batch_size=128,
