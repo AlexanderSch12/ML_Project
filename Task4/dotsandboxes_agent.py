@@ -19,7 +19,10 @@ from absl import flags
 import tensorflow.compat.v1 as tf
 from open_spiel.python.algorithms import evaluate_bots
 from open_spiel.python import rl_environment
-from open_spiel.python.algorithms import dqn
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
 
 logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
 

@@ -17,10 +17,11 @@ from absl import flags
 import numpy as np
 from pathlib import Path
 import pyspiel
-import tensorflow as tf
+import io
+import tensorflow.compat.v1 as tf
 
 from open_spiel.python import rl_environment
-from open_spiel.python.pytorch import dqn
+from open_spiel.python.algorithms import dqn
 from open_spiel.python.algorithms import random_agent
 
 
@@ -30,7 +31,7 @@ logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "/tmp/dqn_dnb_model",
+flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_2x2",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e4),
@@ -76,20 +77,22 @@ class Agent(pyspiel.Bot):
 
         env_configs = {}
         self.env = rl_environment.Environment(self.game_string, **env_configs)
-        info_state_size = self.env.observation_spec()["info_state"][0]
-        num_actions = self.env.action_spec()["num_actions"]
+        self.info_state_size = self.env.observation_spec()["info_state"][0]
+        self.num_actions = self.env.action_spec()["num_actions"]
 
+        sess = tf.Session()
         self.agent = dqn.DQN(
+            session=sess,
             player_id=player_id,
-            state_representation_size=info_state_size,
-            num_actions=num_actions,
+            state_representation_size=self.info_state_size,
+            num_actions=self.num_actions,
             hidden_layers_sizes=FLAGS.hidden_layers_sizes,
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
 
-        if self.agent.has_checkpoint("./dqn_dnb_model"):
-            print("checkpoint found!")
-        self.agent.load("./dqn_dnb_model")
+        self.agent.restore("./dqn_dnb_model")
+        sess.run(tf.global_variables_initializer())
+        print("ok")
 
 
     def restart_at(self, state):
@@ -97,8 +100,25 @@ class Agent(pyspiel.Bot):
         :param state: The initial state of the game.
         """
         # self.env.set_state(state)
-        self.game = state.get_game()
+        # self.game = state.get_game()
+        # env_configs = {}
+        # self.env = rl_environment.Environment(self.game_string, **env_configs)
+        # # info_state_size = self.env.observation_spec()["info_state"][0]
+        # # num_actions = self.env.action_spec()["num_actions"]
+
+        # sess = tf.Session()
+        # self.agent = dqn.DQN(
+        #     session=sess,
+        #     player_id=self.player_id,
+        #     state_representation_size=self.info_state_size,
+        #     num_actions=self.num_actions,
+        #     hidden_layers_sizes=FLAGS.hidden_layers_sizes,
+        #     replay_buffer_capacity=FLAGS.replay_buffer_capacity,
+        #     batch_size=FLAGS.batch_size)
+        
+        # self.agent.restore('dqn_dnb_model')
         self.env.reset()
+        # sess.run(tf.global_variables_initializer())
 
 
     def inform_action(self, state, player_id, action):
@@ -184,7 +204,7 @@ def test_api_calls():
         "dots_and_boxes(num_rows=4,num_cols=4)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
-    bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
+    bots = [get_agent_for_tournament(player_id=0), UniformRandomBot(player_id=1, rng=np.random)]
     returns = evaluate_bots(game.new_initial_state(), bots, np.random)
     print("-----------------------------------------------")
     print(returns)

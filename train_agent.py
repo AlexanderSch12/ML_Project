@@ -14,7 +14,8 @@ from absl import flags
 
 import numpy as np
 import pyspiel
-from open_spiel.python.pytorch import dqn
+from open_spiel.python.algorithms import dqn
+import tensorflow.compat.v1 as tf
 
 from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import random_agent
@@ -24,7 +25,7 @@ from open_spiel.python.algorithms import evaluate_bots
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model_2x2",
+flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e4),
@@ -72,7 +73,7 @@ def eval_against_random_bots(env, trained_agents, random_agents, num_episodes):
 
 
 def main(argv=None):
-  game_string = "dots_and_boxes(num_rows=2,num_cols=2)"
+  game_string = "dots_and_boxes(num_rows=4,num_cols=4)"
   num_players = 2
 
   env_configs = {}
@@ -86,8 +87,10 @@ def main(argv=None):
     for idx in range(num_players)
   ]
 
+  sess = tf.Session()
   agents = [
     dqn.DQN(
+      session=sess,
       player_id=idx,
       state_representation_size=info_state_size,
       num_actions=num_actions,
@@ -95,6 +98,7 @@ def main(argv=None):
       replay_buffer_capacity=FLAGS.replay_buffer_capacity,
       batch_size=FLAGS.batch_size) for idx in range(num_players)
   ]   
+  sess.run(tf.global_variables_initializer())
 
   for ep in range(FLAGS.num_train_episodes):
         if (ep + 1) % FLAGS.eval_every == 0:
