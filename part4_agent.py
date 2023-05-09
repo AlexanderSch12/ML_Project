@@ -17,10 +17,10 @@ from absl import flags
 import numpy as np
 from pathlib import Path
 import pyspiel
-import tensorflow as tf
+
 
 from open_spiel.python import rl_environment
-from open_spiel.python.pytorch import dqn
+import dqn
 from open_spiel.python.algorithms import random_agent
 
 from dqn import DQN
@@ -31,7 +31,7 @@ logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "/tmp/dqn_dnb_model",
+flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model_5x5",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e4),
@@ -75,7 +75,7 @@ class Agent(pyspiel.Bot):
         self.player_id = player_id
 
         # create env for trained 15x15 game size
-        self.game_string_trained = "dots_and_boxes(num_rows=15,num_cols=15)"
+        self.game_string_trained = "dots_and_boxes(num_rows=5,num_cols=5)"
         env_configs_trained = {}
         self.env_trained = rl_environment.Environment(self.game_string_trained, **env_configs_trained)
         info_state_size_trained = self.env_trained.observation_spec()["info_state"][0]
@@ -90,7 +90,7 @@ class Agent(pyspiel.Bot):
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
 
-        self.agent.load("./dqn_dnb_model")
+        self.trained_agent.load("./dqn_dnb_model_5x5")
 
 
     def restart_at(self, state):
@@ -204,7 +204,7 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dots_and_boxes(num_rows=4,num_cols=4)")
+        "dots_and_boxes(num_rows=2,num_cols=2)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
     bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
