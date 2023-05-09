@@ -3,7 +3,7 @@ import time
 from absl import app
 import matplotlib.pyplot as plt
 
-num_rows = 1
+num_rows = 3
 num_cols = 2
 num_boxes = num_rows * num_cols
 num_cells = (num_rows + 1) * (num_cols + 1)
@@ -48,7 +48,7 @@ def get_observation_state(obs_tensor, row, col, part, as_str=True):
         is_state = num2state(is_state)
     return is_state
 
-def _minimax(state, maximizing_player_id, alpha, beta):
+def _minimax(state, maximizing_player_id):
     """
     Implements a min-max algorithm
     Arguments:
@@ -71,39 +71,25 @@ def _minimax(state, maximizing_player_id, alpha, beta):
 
     if player == maximizing_player_id:
         selection = max
-        # optimal_value = float('-inf')
-        # for action in state.legal_actions():
-        #     value = _minimax(state.child(action), maximizing_player_id, alpha, beta)
-        #     optimal_value = selection(optimal_value, value)
-        #     alpha = max(alpha, value)
-        #     if beta <= alpha:
-        #         break
     else:
         selection = min
-        # optimal_value = float('inf')
-        # for action in state.legal_actions():
-        #     value = _minimax(state.child(action), maximizing_player_id, alpha, beta)
-        #     optimal_value = selection(optimal_value, value)
-        #     beta = min(beta, value)
-        #     if beta <= alpha:
-        #         break
 
-    values_children = [_minimax(state.child(action), maximizing_player_id, alpha, beta) for action in state.legal_actions()]
+    values_children = [_minimax(state.child(action), maximizing_player_id) for action in state.legal_actions()]
     optimal_value = selection(values_children)
 
     # add state and symmetries to the transposition table
     transposition_table[dbn_str] = optimal_value
-    # transposition_table[mirror_h(dbn_str)] = optimal_value
-    # transposition_table[mirror_v(dbn_str)] = optimal_value
-    # if num_rows  == num_cols:
-    #         r1 = rotate_90_degrees(dbn_str)
-    #         r2 = rotate_90_degrees(r1)
-    #         r3 = rotate_90_degrees(r2)
-    #         transposition_table[r1] = optimal_value
-    #         transposition_table[r2] = optimal_value
-    #         transposition_table[r3] = optimal_value
-    # else:
-    #     transposition_table[rotate_180_degrees(dbn_str)] = optimal_value
+    transposition_table[mirror_h(dbn_str)] = optimal_value
+    transposition_table[mirror_v(dbn_str)] = optimal_value
+    if num_rows  == num_cols:
+            r1 = rotate_90_degrees(dbn_str)
+            r2 = rotate_90_degrees(r1)
+            r3 = rotate_90_degrees(r2)
+            transposition_table[r1] = optimal_value
+            transposition_table[r2] = optimal_value
+            transposition_table[r3] = optimal_value
+    else:
+        transposition_table[rotate_180_degrees(dbn_str)] = optimal_value
 
     return optimal_value
 
@@ -148,17 +134,17 @@ def minimax_search(game,
     v = _minimax(
         state.clone(),
         maximizing_player_id,
-        float('-inf'),
-        float('inf'))
+        )
+    
     return v
 
 
 def dbn_string_boxes(state):
-    """Append the score for each cell to the dbn string. No box (0), player 1 box (1), player 2 box (2).
+    """Append the score for each cell to the dbn string. No box (0), player 1 box (1), player 2 box (2). Append the current player to the end . Player 1 (0), Player 2 (1).
     Arguments:
         state: The current state of the game.
     Returns:
-        The dbn string appended with the score for each cell
+        The dbn string appended with the score for each cell and the current player
     """
     dbn_str = state.dbn_string()
     obs_tensor = state.observation_tensor(0)
@@ -177,14 +163,16 @@ def dbn_string_boxes(state):
             for part in ['c']:
                 obs = get_observation_state(obs_tensor, row, col, part, False)
                 dbn_str += str(obs)
+    dbn_str += str(state.current_player())
     return dbn_str
 
 
 def rotate_90_degrees(dbn_string):
     # Split the string into horizontal and vertical edges
     h_edges = dbn_string[:(num_rows + 1) * num_cols]
-    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes]
-    boxes = dbn_string[int(len(dbn_string)) - num_boxes:]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes - 1]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes - 1:int(len(dbn_string)) - 1]
+    player = dbn_string[int(len(dbn_string)) - 1:]
 
     rotated_str = ""
     # v_edges to h_edges
@@ -203,14 +191,17 @@ def rotate_90_degrees(dbn_string):
         for j in range(int(len(boxes))):
             if (j + 1) % (num_cols) == 0:
                 rotated_str += boxes[j - i]
+    # add player
+    rotated_str += player
     return rotated_str
 
 
 def rotate_180_degrees(dbn_string):
     # Split the string into horizontal and vertical edges
     h_edges = dbn_string[:(num_rows + 1) * num_cols]
-    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes]
-    boxes = dbn_string[int(len(dbn_string)) - num_boxes:]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes - 1]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes - 1:int(len(dbn_string)) - 1]
+    player = dbn_string[int(len(dbn_string)) - 1:]
 
     rotated_str = ""
     # reverse h_edges
@@ -219,13 +210,16 @@ def rotate_180_degrees(dbn_string):
     rotated_str += v_edges[::-1]
     # reverse boxes
     rotated_str += boxes[::-1]
+    # add player
+    rotated_str += player
     return rotated_str
 
 def mirror_h(dbn_string):
     # Split the string into horizontal and vertical edges
     h_edges = dbn_string[:(num_rows + 1) * num_cols]
-    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes]
-    boxes = dbn_string[int(len(dbn_string)) - num_boxes:]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes - 1]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes - 1:int(len(dbn_string)) - 1]
+    player = dbn_string[int(len(dbn_string)) - 1:]
 
     h_mirrored_str = ""
     # mirror h_edges
@@ -240,13 +234,16 @@ def mirror_h(dbn_string):
     for i in range(num_rows):
         for j in range(num_cols):
             h_mirrored_str += boxes[(i + 1) * num_cols - j - 1]
+    # add player
+    h_mirrored_str += player
     return h_mirrored_str
 
 def mirror_v(dbn_string):
     # Split the string into horizontal and vertical edges
     h_edges = dbn_string[:(num_rows + 1) * num_cols]
-    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes]
-    boxes = dbn_string[int(len(dbn_string)) - num_boxes:]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes - 1]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes - 1:int(len(dbn_string)) - 1]
+    player = dbn_string[int(len(dbn_string)) - 1:]
 
     v_mirrored_str = ""
     # mirror h_edges
@@ -261,6 +258,8 @@ def mirror_v(dbn_string):
     for i in range(num_rows):
         for j in range(num_cols):
             v_mirrored_str += boxes[(num_rows - i - 1) * num_cols + j]
+    # add player
+    v_mirrored_str += player
     return v_mirrored_str
 
 def plot_performance():
