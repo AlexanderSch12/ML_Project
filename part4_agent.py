@@ -150,23 +150,18 @@ class Agent(pyspiel.Bot):
         if not time_step.last():
             # Get legal_actions for real board
             legal_actions_small_board = time_step.observations["legal_actions"][self.player_id]
+
             legal_actions = []
             for action in legal_actions_small_board:
                 legal_actions.append(self.legal_moves[action])
                 
-            legal_actions_big = time_step_trained.observations["legal_actions"][self.player_id]
-
-            print("Legal actions small board:")
-            print(legal_actions)
-            print("Legal actions big board:")
-            print(legal_actions_big)
-
             # Trained agent takes step using only legal_actions
             trained_agent_output = self.trained_agent.step(time_step_trained, legal_actions ,is_evaluation=True)
 
             # Apply action to env_trained and env
             self.env_trained.step([trained_agent_output.action])
-            self.env.step([trained_agent_output.action])
+            self.env.step([self.legal_moves.index(trained_agent_output.action)])
+            print(self.legal_moves.index(trained_agent_output.action))
             print(trained_agent_output.action)
             print(self.env_trained.get_state)
         else:
@@ -179,7 +174,7 @@ class Agent(pyspiel.Bot):
             # Trained agent takes step using only legal_actions
             trained_agent_output = self.trained_agent.step(time_step_trained, legal_actions ,is_evaluation=True)
 
-        return trained_agent_output.action
+        return self.legal_moves.index(trained_agent_output.action)
 
 
 def evaluate_bots(state, bots, rng):
@@ -236,7 +231,7 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dots_and_boxes(num_rows=2,num_cols=2)")
+        "dots_and_boxes(num_rows=3,num_cols=4)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
     bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
