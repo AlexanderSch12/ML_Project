@@ -4,18 +4,26 @@ import pyspiel
 from open_spiel.python import rl_environment
 from open_spiel.python.algorithms import random_agent
 
+def transform_edge_number( rows, cols):
+    result = []
+    
+    # Vertical
+    for r in range(rows):
+        for c in range(cols+1):
+            result.append((r*6)+30 + c)
+
+    # Horizontal
+    for r in range(rows+1):
+        for c in range(cols):
+            result.append((r*5) + c)
+        
+    result.sort()
+    return result
+
 
 def test():
-    game_string = "dots_and_boxes(num_rows=4,num_cols=4)"
-    env_configs = {}
-    env = rl_environment.Environment(game_string, **env_configs)
-    env.reset()
-    time_step = env.get_time_step()
-    legal_actions = time_step.observations["legal_actions"][0]
-    print(legal_actions)
-    env.step([1])
-    legal_actions = time_step.observations["legal_actions"][0]
-    print(legal_actions)
+    edges_3x2 = transform_edge_number(3, 2)
+    print(edges_3x2)
 
     return
 

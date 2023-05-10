@@ -31,7 +31,7 @@ logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model_5x5",
+flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model_5x5.pt",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e4),
@@ -62,6 +62,23 @@ def get_agent_for_tournament(player_id):
     return agent
 
 
+def transform_edge_number( rows, cols):
+    result = []
+    
+    # Vertical
+    for r in range(rows):
+        for c in range(cols+1):
+            result.append((r*6)+30 + c)
+
+    # Horizontal
+    for r in range(rows+1):
+        for c in range(cols):
+            result.append((r*5) + c)
+        
+    result.sort()
+    return result
+
+
 class Agent(pyspiel.Bot):
     """Agent template"""
 
@@ -90,7 +107,7 @@ class Agent(pyspiel.Bot):
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
 
-        self.trained_agent.load("./dqn_dnb_model_5x5")
+        self.trained_agent.load("dqn_dnb_model_5x5_2.pt")
 
 
     def restart_at(self, state):
@@ -98,13 +115,14 @@ class Agent(pyspiel.Bot):
         :param state: The initial state of the game.
         """
         self.game = state.get_game()
+        game_config = self.game.get_parameters()
+        self.legal_moves = transform_edge_number(game_config["num_rows"],game_config["num_cols"])
 
         env_configs_trained = {}
         self.env = rl_environment.Environment(self.game, **env_configs_trained)
-        info_state = self.env.observation_spec()["info_state"][0]
-        num_actions = self.env.action_spec()["num_actions"]
         
         self.env_trained.reset()
+        self.env.reset()
 
 
     def inform_action(self, state, player_id, action):
@@ -114,12 +132,11 @@ class Agent(pyspiel.Bot):
         :param action: The action which the player executed.
         """
         # inform real size environment of action
+        print(action)
         self.env.step([action])
 
         # inform 15x15 size environmnet of action
-        self.env_trained.step([action])
-
-        # TODO convert action and infrom env_trained
+        self.env_trained.step([self.legal_moves[action]])
 
         
     def step(self, state):
@@ -132,7 +149,17 @@ class Agent(pyspiel.Bot):
         time_step = self.env.get_time_step()
         if not time_step.last():
             # Get legal_actions for real board
-            legal_actions = time_step.observations["legal_actions"][self.player_id]
+            legal_actions_small_board = time_step.observations["legal_actions"][self.player_id]
+            legal_actions = []
+            for action in legal_actions_small_board:
+                legal_actions.append(self.legal_moves[action])
+                
+            legal_actions_big = time_step_trained.observations["legal_actions"][self.player_id]
+
+            print("Legal actions small board:")
+            print(legal_actions)
+            print("Legal actions big board:")
+            print(legal_actions_big)
 
             # Trained agent takes step using only legal_actions
             trained_agent_output = self.trained_agent.step(time_step_trained, legal_actions ,is_evaluation=True)
@@ -140,9 +167,14 @@ class Agent(pyspiel.Bot):
             # Apply action to env_trained and env
             self.env_trained.step([trained_agent_output.action])
             self.env.step([trained_agent_output.action])
+            print(trained_agent_output.action)
+            print(self.env_trained.get_state)
         else:
             # Get legal_actions for real board
-            legal_actions = time_step.observations["legal_actions"][self.player_id]
+            legal_actions_small_board = time_step.observations["legal_actions"][self.player_id]
+            legal_actions = []
+            for action in legal_actions_small_board:
+                legal_actions.append(self.legal_moves[action])
 
             # Trained agent takes step using only legal_actions
             trained_agent_output = self.trained_agent.step(time_step_trained, legal_actions ,is_evaluation=True)
