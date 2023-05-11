@@ -74,6 +74,7 @@ class MLP(nn.Module):
 
   def __init__(self,
                input_size,
+               num_hidden_layers,
                hidden_sizes,
                output_size,
                activate_final=False):
@@ -88,14 +89,15 @@ class MLP(nn.Module):
 
     super(MLP, self).__init__()
     self._layers = []
+    # Input layer
+    self._layers.append(SonnetLinear(in_size=input_size, out_size=hidden_sizes))
     # Hidden layers
-    for size in hidden_sizes:
-      self._layers.append(SonnetLinear(in_size=input_size, out_size=size))
-      input_size = size
+    for i in range(num_hidden_layers):
+      self._layers.append(SonnetLinear(in_size=hidden_sizes, out_size=hidden_sizes))
     # Output layer
     self._layers.append(
         SonnetLinear(
-            in_size=input_size,
+            in_size=hidden_sizes,
             out_size=output_size,
             activate_relu=activate_final))
 
@@ -117,15 +119,16 @@ class DQN(rl_agent.AbstractAgent):
                player_id,
                state_representation_size,
                num_actions,
+               num_hidden_layers=3,
                hidden_layers_sizes=128,
-               replay_buffer_capacity=1000,
+               replay_buffer_capacity=128,
                batch_size=128,
                replay_buffer_class=ReplayBuffer,
-               learning_rate=1e-2,
-               update_target_network_every=1000,
-               learn_every=5,
+               learning_rate=1e-4,
+               update_target_network_every=200,
+               learn_every=20,
                discount_factor=0.5,
-               min_buffer_size_to_learn=500,
+               min_buffer_size_to_learn=50,
                epsilon_start=1.0,
                epsilon_end=0.1,
                epsilon_decay_duration=int(1e6),
@@ -139,9 +142,8 @@ class DQN(rl_agent.AbstractAgent):
 
     self.player_id = player_id
     self._num_actions = num_actions
-    if isinstance(hidden_layers_sizes, int):
-      hidden_layers_sizes = [hidden_layers_sizes]
-    self._layer_sizes = hidden_layers_sizes
+    self.num_hidden_layers = num_hidden_layers
+    self._hidden_layers_sizes = hidden_layers_sizes
     self._batch_size = batch_size
     self._update_target_network_every = update_target_network_every
     self._learn_every = learn_every
@@ -166,11 +168,9 @@ class DQN(rl_agent.AbstractAgent):
     self._last_loss_value = None
 
     # Create the Q-network instances
-    self._q_network = MLP(state_representation_size, self._layer_sizes,
-                          num_actions)
+    self._q_network = MLP(state_representation_size, self.num_hidden_layers, self._hidden_layers_sizes, num_actions)
 
-    self._target_q_network = MLP(state_representation_size, self._layer_sizes,
-                                 num_actions)
+    self._target_q_network = MLP(state_representation_size, self.num_hidden_layers, self._hidden_layers_sizes, num_actions)
 
     if loss_str == "mse":
       self.loss_class = F.mse_loss
