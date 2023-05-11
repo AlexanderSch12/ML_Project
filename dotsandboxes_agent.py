@@ -23,7 +23,7 @@ from open_spiel.python import rl_environment
 import dqn
 from open_spiel.python.algorithms import random_agent
 
-from dqn import DQN
+from dqn_2 import DQN
 
 logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
 
@@ -43,11 +43,11 @@ flags.DEFINE_integer(
     "Episode frequency at which the DQN agents are evaluated.")
 
 # DQN model hyper-parameters
-flags.DEFINE_integer("hidden_layers_sizes", 64,
+flags.DEFINE_integer("hidden_layers_sizes", 128,
                   "Number of hidden units in the Q-Network MLP.")
-flags.DEFINE_integer("replay_buffer_capacity", int(1e5),
+flags.DEFINE_integer("replay_buffer_capacity", 128,
                      "Size of the replay buffer.")
-flags.DEFINE_integer("batch_size", 32,
+flags.DEFINE_integer("batch_size", 64,
                      "Number of transitions to sample at each learning step.")
 
 
@@ -118,7 +118,7 @@ class Agent(pyspiel.Bot):
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
 
-        self.trained_agent.load("Training/dqn_dnb_model_2x2.pt")
+        self.trained_agent.load("./dqn_dnb_model_15x15.pt")
 
 
     def restart_at(self, state):
@@ -242,11 +242,7 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-<<<<<<< HEAD
-        "dots_and_boxes(num_rows=2,num_cols=3)")
-=======
         "dots_and_boxes(num_rows=5,num_cols=5)")
->>>>>>> part4
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
     bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
