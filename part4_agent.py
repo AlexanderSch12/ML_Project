@@ -92,7 +92,7 @@ class Agent(pyspiel.Bot):
         self.player_id = player_id
 
         # create env for trained 15x15 game size
-        self.game_string_trained = "dots_and_boxes(num_rows=5,num_cols=5)"
+        self.game_string_trained = "dots_and_boxes(num_rows=15,num_cols=15)"
         env_configs_trained = {}
         self.env_trained = rl_environment.Environment(self.game_string_trained, **env_configs_trained)
         info_state_size_trained = self.env_trained.observation_spec()["info_state"][0]
@@ -107,7 +107,7 @@ class Agent(pyspiel.Bot):
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
 
-        self.trained_agent.load("dqn_dnb_model_5x5_2.pt")
+        self.trained_agent.load("Training/dqn_dnb_model_2x2.pt")
 
 
     def restart_at(self, state):
@@ -231,7 +231,7 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dots_and_boxes(num_rows=3,num_cols=4)")
+        "dots_and_boxes(num_rows=2,num_cols=3)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
     bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
