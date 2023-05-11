@@ -24,11 +24,8 @@ from open_spiel.python.algorithms import evaluate_bots
 FLAGS = flags.FLAGS
 
 # Training parameters
-<<<<<<< HEAD:Training/trained_agent.py
+
 flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_15x15.pt",
-=======
-flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_5x5_3.pt",
->>>>>>> part4:trained_agent.py
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e3),
