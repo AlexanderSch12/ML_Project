@@ -140,7 +140,6 @@ class DQN(rl_agent.AbstractAgent):
 
     self.player_id = player_id
     self._num_actions = num_actions
-    # self.illegal_actions = illegal_actions
     if isinstance(hidden_layers_sizes, int):
       hidden_layers_sizes = [hidden_layers_sizes]
     self._layer_sizes = hidden_layers_sizes
@@ -195,6 +194,7 @@ class DQN(rl_agent.AbstractAgent):
 
     Args:
       time_step: an instance of rl_environment.TimeStep.
+      legal_actions: all possible actions the agent can take
       is_evaluation: bool, whether this is a training or evaluation call.
       add_transition_record: Whether to add to the replay buffer on this step.
 
@@ -207,8 +207,6 @@ class DQN(rl_agent.AbstractAgent):
         time_step.is_simultaneous_move() or
         self.player_id == time_step.current_player()):
       info_state = time_step.observations["info_state"][self.player_id]
-      # legal_actions = time_step.observations["legal_actions"][self.player_id]
-      # legal_actions = np.setdiff1d(legal_actions,self.illegal_actions)
       epsilon = self._get_epsilon(is_evaluation)
       action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon)
     else:

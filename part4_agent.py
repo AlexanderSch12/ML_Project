@@ -31,7 +31,7 @@ logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model_5x5.pt",
+flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model_5x5_3.pt",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e4),
@@ -64,18 +64,29 @@ def get_agent_for_tournament(player_id):
 
 def transform_edge_number( rows, cols):
     result = []
+
+    # Transform to 5x5
+    # # Horizontal
+    # for r in range(rows+1):
+    #     for c in range(cols):
+    #         result.append((r*5) + c)
+    
+    # # Vertical
+    # for r in range(rows):
+    #     for c in range(cols+1):
+    #         result.append((r*6)+30 + c)
+
+    # Transform to 15x15
+    # Horizontal
+    for r in range(rows+1):
+        for c in range(cols):
+            result.append((r*15) + c)
     
     # Vertical
     for r in range(rows):
         for c in range(cols+1):
-            result.append((r*6)+30 + c)
-
-    # Horizontal
-    for r in range(rows+1):
-        for c in range(cols):
-            result.append((r*5) + c)
+            result.append((r*16)+240 + c)
         
-    result.sort()
     return result
 
 
@@ -231,7 +242,11 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
+<<<<<<< HEAD
         "dots_and_boxes(num_rows=2,num_cols=3)")
+=======
+        "dots_and_boxes(num_rows=5,num_cols=5)")
+>>>>>>> part4
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
     bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
