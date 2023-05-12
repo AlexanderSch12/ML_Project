@@ -38,7 +38,7 @@ flags.DEFINE_integer(
 # DQN model hyper-parameters
 flags.DEFINE_integer("hidden_layers_sizes", 128,
                   "Number of hidden units in the Q-Network MLP.")
-flags.DEFINE_integer("replay_buffer_capacity", 128,
+flags.DEFINE_integer("replay_buffer_capacity", 150,
                      "Size of the replay buffer.")
 flags.DEFINE_integer("batch_size", 64,
                      "Number of transitions to sample at each learning step.")
