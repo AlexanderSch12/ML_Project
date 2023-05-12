@@ -31,15 +31,15 @@ logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "./dqn_dnb_model_5x5_3.pt",
+flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_15x15.pt",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
-    "save_every", int(1e4),
+    "save_every", int(1e3),
     "Episode frequency at which the DQN agent models are saved.")
 flags.DEFINE_integer("num_train_episodes", int(1e6),
                      "Number of training episodes.")
 flags.DEFINE_integer(
-    "eval_every", 1000,
+    "eval_every", 100,
     "Episode frequency at which the DQN agents are evaluated.")
 
 # DQN model hyper-parameters
@@ -118,7 +118,7 @@ class Agent(pyspiel.Bot):
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
 
-        self.trained_agent.load("./dqn_dnb_model_15x15.pt")
+        self.trained_agent.load("dqn_dnb_model_15x15.pt")
 
 
     def restart_at(self, state):
@@ -172,8 +172,6 @@ class Agent(pyspiel.Bot):
             # Apply action to env_trained and env
             self.env_trained.step([trained_agent_output.action])
             self.env.step([self.legal_moves.index(trained_agent_output.action)])
-            print(self.legal_moves.index(trained_agent_output.action))
-            print(trained_agent_output.action)
             print(self.env_trained.get_state)
         else:
             # Get legal_actions for real board
