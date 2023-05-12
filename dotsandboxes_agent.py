@@ -117,7 +117,9 @@ class Agent(pyspiel.Bot):
             replay_buffer_capacity=FLAGS.replay_buffer_capacity,
             batch_size=FLAGS.batch_size)
 
-        self.trained_agent.load("dqn_dnb_model_15x15.pt")
+        package_directory = os.path.dirname(os.path.abspath(__file__))
+        model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15.pt')
+        self.trained_agent.load(model_file)
 
 
     def restart_at(self, state):
@@ -239,7 +241,7 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dots_and_boxes(num_rows=5,num_cols=5)")
+        "dots_and_boxes(num_rows=7,num_cols=7)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
     bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
