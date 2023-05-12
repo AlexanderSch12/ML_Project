@@ -144,7 +144,7 @@ class Agent(pyspiel.Bot):
         :param action: The action which the player executed.
         """
         # inform real size environment of action
-        print(action)
+        # print(action)
         self.env.step([action])
 
         # inform 15x15 size environmnet of action
@@ -173,7 +173,7 @@ class Agent(pyspiel.Bot):
             # Apply action to env_trained and env
             self.env_trained.step([trained_agent_output.action])
             self.env.step([self.legal_moves.index(trained_agent_output.action)])
-            print(self.env_trained.get_state)
+            # print(self.env_trained.get_state)
         else:
             # Get legal_actions for real board
             legal_actions_small_board = time_step.observations["legal_actions"][self.player_id]
