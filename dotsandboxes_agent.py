@@ -20,7 +20,6 @@ import pyspiel
 
 
 from open_spiel.python import rl_environment
-import dqn
 from open_spiel.python.algorithms import random_agent
 
 from dqn_2 import DQN
