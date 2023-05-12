@@ -413,9 +413,9 @@ class DQN(rl_agent.AbstractAgent):
         relative or absolute but the filename should be included. For example:
         optimizer.pt or /path/to/optimizer.pt
     """
-    torch.save(self._q_network, data_path)
+    torch.save(self._q_network.state_dict(), data_path)
     if optimizer_data_path is not None:
-      torch.save(self._optimizer, optimizer_data_path)
+      torch.save(self._optimizer.state_dict(), optimizer_data_path)
 
   def load(self, data_path, optimizer_data_path=None):
     """Load checkpoint/trained model and optimizer.
