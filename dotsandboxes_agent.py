@@ -13,7 +13,6 @@ import sys
 import importlib.util
 import logging
 from absl import app
-from absl import flags
 import numpy as np
 from pathlib import Path
 import pyspiel
@@ -25,29 +24,6 @@ from open_spiel.python.algorithms import random_agent
 from dqn_2 import DQN
 
 logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
-
-
-FLAGS = flags.FLAGS
-
-# Training parameters
-flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_15x15.pt",
-                    "Directory to save/load the agent models.")
-flags.DEFINE_integer(
-    "save_every", int(1e3),
-    "Episode frequency at which the DQN agent models are saved.")
-flags.DEFINE_integer("num_train_episodes", int(1e6),
-                     "Number of training episodes.")
-flags.DEFINE_integer(
-    "eval_every", 100,
-    "Episode frequency at which the DQN agents are evaluated.")
-
-# DQN model hyper-parameters
-flags.DEFINE_integer("hidden_layers_sizes", 128,
-                  "Number of hidden units in the Q-Network MLP.")
-flags.DEFINE_integer("replay_buffer_capacity", 128,
-                     "Size of the replay buffer.")
-flags.DEFINE_integer("batch_size", 64,
-                     "Number of transitions to sample at each learning step.")
 
 
 def get_agent_for_tournament(player_id):
@@ -113,9 +89,9 @@ class Agent(pyspiel.Bot):
             player_id=player_id,
             state_representation_size=info_state_size_trained,
             num_actions=num_actions_trained,
-            hidden_layers_sizes=FLAGS.hidden_layers_sizes,
-            replay_buffer_capacity=FLAGS.replay_buffer_capacity,
-            batch_size=FLAGS.batch_size)
+            hidden_layers_sizes=128,
+            replay_buffer_capacity=128,
+            batch_size=64)
 
         package_directory = os.path.dirname(os.path.abspath(__file__))
         model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15.pt')
