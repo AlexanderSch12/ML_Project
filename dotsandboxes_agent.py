@@ -13,42 +13,17 @@ import sys
 import importlib.util
 import logging
 from absl import app
-from absl import flags
 import numpy as np
 from pathlib import Path
 import pyspiel
 
 
 from open_spiel.python import rl_environment
-import dqn
 from open_spiel.python.algorithms import random_agent
 
 from dqn_2 import DQN
 
 logger = logging.getLogger('be.kuleuven.cs.dtai.dotsandboxes')
-
-
-FLAGS = flags.FLAGS
-
-# Training parameters
-flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_15x15.pt",
-                    "Directory to save/load the agent models.")
-flags.DEFINE_integer(
-    "save_every", int(1e3),
-    "Episode frequency at which the DQN agent models are saved.")
-flags.DEFINE_integer("num_train_episodes", int(1e6),
-                     "Number of training episodes.")
-flags.DEFINE_integer(
-    "eval_every", 100,
-    "Episode frequency at which the DQN agents are evaluated.")
-
-# DQN model hyper-parameters
-flags.DEFINE_integer("hidden_layers_sizes", 128,
-                  "Number of hidden units in the Q-Network MLP.")
-flags.DEFINE_integer("replay_buffer_capacity", 128,
-                     "Size of the replay buffer.")
-flags.DEFINE_integer("batch_size", 64,
-                     "Number of transitions to sample at each learning step.")
 
 
 def get_agent_for_tournament(player_id):
@@ -114,11 +89,17 @@ class Agent(pyspiel.Bot):
             player_id=player_id,
             state_representation_size=info_state_size_trained,
             num_actions=num_actions_trained,
-            hidden_layers_sizes=FLAGS.hidden_layers_sizes,
-            replay_buffer_capacity=FLAGS.replay_buffer_capacity,
-            batch_size=FLAGS.batch_size)
+            hidden_layers_sizes=256,
+            replay_buffer_capacity=128,
+            batch_size=64)
 
-        self.trained_agent.load("dqn_dnb_model_15x15.pt")
+        package_directory = os.path.dirname(os.path.abspath(__file__))
+        if player_id == 0:
+            model_file = os.path.join(package_directory, 'dqn_dnb_model_1_15x15.pt')
+            self.trained_agent.load(model_file)
+        else:
+            model_file = os.path.join(package_directory, 'dqn_dnb_model_2_15x15.pt')
+            self.trained_agent.load(model_file)
 
 
     def restart_at(self, state):
@@ -143,7 +124,7 @@ class Agent(pyspiel.Bot):
         :param action: The action which the player executed.
         """
         # inform real size environment of action
-        print(action)
+        # print(action)
         self.env.step([action])
 
         # inform 15x15 size environmnet of action
@@ -172,7 +153,7 @@ class Agent(pyspiel.Bot):
             # Apply action to env_trained and env
             self.env_trained.step([trained_agent_output.action])
             self.env.step([self.legal_moves.index(trained_agent_output.action)])
-            print(self.env_trained.get_state)
+            # print(self.env_trained.get_state)
         else:
             # Get legal_actions for real board
             legal_actions_small_board = time_step.observations["legal_actions"][self.player_id]
@@ -240,7 +221,7 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dots_and_boxes(num_rows=5,num_cols=5)")
+        "dots_and_boxes(num_rows=7,num_cols=7)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
     bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]

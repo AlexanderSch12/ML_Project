@@ -67,6 +67,36 @@ class SonnetLinear(nn.Module):
   def forward(self, tensor):
     y = F.linear(tensor, self._weight, self._bias)
     return F.relu(y) if self._activate_relu else y
+  
+
+class Convolutional(nn.Module):
+  def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, activate_relu=True):
+    """Creates a Sonnet convolutional layer.
+    Args:
+    in_channels: (int) number of input channels
+    out_channels: (int) number of output channels
+    kernel_size: (int) size of the convolutional kernel
+    stride: (int) stride of the convolutional operation
+    padding: (int) amount of zero-padding
+    activate_relu: (bool) whether to include a ReLU activation layer
+    """
+    super(Convolutional, self).__init__()
+    self._activate_relu = activate_relu
+    self.stride = stride
+    self.padding = padding
+    stddev = 1.0 / math.sqrt(in_channels * kernel_size**2)
+    mean = 0
+    lower = (-2 * stddev - mean) / stddev
+    upper = (2 * stddev - mean) / stddev
+    self._weight = nn.Parameter(
+        torch.Tensor(
+            stats.truncnorm.rvs(
+                lower, upper, loc=mean, scale=stddev, size=[out_channels, in_channels, kernel_size, kernel_size])))
+    self._bias = nn.Parameter(torch.zeros([out_channels]))
+
+  def forward(self, tensor):
+    y = F.conv2d(tensor, self._weight, self._bias, stride=self.stride, padding=self.padding)
+    return F.relu(y) if self._activate_relu else y
 
 
 class MLP(nn.Module):
@@ -77,7 +107,7 @@ class MLP(nn.Module):
                num_hidden_layers,
                hidden_sizes,
                output_size,
-               activate_final=False):
+               activate_final=True):
     """Create the MLP.
 
     Args:
@@ -91,6 +121,8 @@ class MLP(nn.Module):
     self._layers = []
     # Input layer
     self._layers.append(SonnetLinear(in_size=input_size, out_size=hidden_sizes))
+    # self._layers.append(Convolutional(in_channels=input_size, out_channels=input_size, kernel_size=3))
+    # self._layers.append(Convolutional(in_channels=input_size, out_channels=input_size, kernel_size=3))
     # Hidden layers
     for i in range(num_hidden_layers):
       self._layers.append(SonnetLinear(in_size=hidden_sizes, out_size=hidden_sizes))
@@ -120,14 +152,14 @@ class DQN(rl_agent.AbstractAgent):
                state_representation_size,
                num_actions,
                num_hidden_layers=1,
-               hidden_layers_sizes=128,
+               hidden_layers_sizes=256,
                replay_buffer_capacity=128,
                batch_size=128,
                replay_buffer_class=ReplayBuffer,
                learning_rate=1e-2,
-               update_target_network_every=1000,
+               update_target_network_every=100,
                learn_every=5,
-               discount_factor=0.5,
+               discount_factor=1,
                min_buffer_size_to_learn=50,
                epsilon_start=1.0,
                epsilon_end=0.1,
@@ -188,11 +220,12 @@ class DQN(rl_agent.AbstractAgent):
     else:
       raise ValueError("Not implemented, choose from 'adam' and 'sgd'.")
 
-  def step(self, time_step, is_evaluation=False, add_transition_record=True):
+  def step(self, time_step, legal_actions, is_evaluation=False, add_transition_record=True):
     """Returns the action to be taken and updates the Q-network if needed.
 
     Args:
       time_step: an instance of rl_environment.TimeStep.
+      legal_actions: all possible actions the agent can take
       is_evaluation: bool, whether this is a training or evaluation call.
       add_transition_record: Whether to add to the replay buffer on this step.
 
@@ -205,7 +238,6 @@ class DQN(rl_agent.AbstractAgent):
         time_step.is_simultaneous_move() or
         self.player_id == time_step.current_player()):
       info_state = time_step.observations["info_state"][self.player_id]
-      legal_actions = time_step.observations["legal_actions"][self.player_id]
       epsilon = self._get_epsilon(is_evaluation)
       action, probs = self._epsilon_greedy(info_state, legal_actions, epsilon)
     else:
@@ -226,7 +258,7 @@ class DQN(rl_agent.AbstractAgent):
 
       if self._prev_timestep and add_transition_record:
         # We may omit record adding here if it's done elsewhere.
-        self.add_transition(self._prev_timestep, self._prev_action, time_step)
+        self.add_transition(self._prev_timestep, self._prev_action, time_step, legal_actions)
 
       if time_step.last():  # prepare for the next episode.
         self._prev_timestep = None
@@ -238,7 +270,7 @@ class DQN(rl_agent.AbstractAgent):
 
     return rl_agent.StepOutput(action=action, probs=probs)
 
-  def add_transition(self, prev_time_step, prev_action, time_step):
+  def add_transition(self, prev_time_step, prev_action, time_step, legal_actions):
     """Adds the new transition using `time_step` to the replay buffer.
 
     Adds the transition from `self._prev_timestep` to `time_step` by
@@ -250,7 +282,7 @@ class DQN(rl_agent.AbstractAgent):
       time_step: current ts, an instance of rl_environment.TimeStep.
     """
     assert prev_time_step is not None
-    legal_actions = (time_step.observations["legal_actions"][self.player_id])
+    # legal_actions = (time_step.observations["legal_actions"][self.player_id])
     legal_actions_mask = np.zeros(self._num_actions)
     legal_actions_mask[legal_actions] = 1.0
     transition = Transition(

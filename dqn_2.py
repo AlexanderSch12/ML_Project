@@ -18,7 +18,6 @@ import collections
 import math
 import sys
 import numpy as np
-import io
 from scipy import stats
 import torch
 from torch import nn
@@ -121,7 +120,7 @@ class DQN(rl_agent.AbstractAgent):
                state_representation_size,
                num_actions,
                num_hidden_layers=1,
-               hidden_layers_sizes=128,
+               hidden_layers_sizes=256,
                replay_buffer_capacity=150,
                batch_size=64,
                replay_buffer_class=ReplayBuffer,
