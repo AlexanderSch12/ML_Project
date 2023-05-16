@@ -24,7 +24,7 @@ from open_spiel.python.algorithms import evaluate_bots
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_15x15.pt",
+flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_15x15_v5.pt",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e3),
@@ -32,13 +32,13 @@ flags.DEFINE_integer(
 flags.DEFINE_integer("num_train_episodes", int(1e6),
                      "Number of training episodes.")
 flags.DEFINE_integer(
-    "eval_every", 100,
+    "eval_every", 250,
     "Episode frequency at which the DQN agents are evaluated.")
 
 # DQN model hyper-parameters
-flags.DEFINE_integer("hidden_layers_sizes", 128,
+flags.DEFINE_integer("hidden_layers_sizes", 300,
                   "Number of hidden units in the Q-Network MLP.")
-flags.DEFINE_integer("replay_buffer_capacity", 150,
+flags.DEFINE_integer("replay_buffer_capacity", 2000,
                      "Size of the replay buffer.")
 flags.DEFINE_integer("batch_size", 64,
                      "Number of transitions to sample at each learning step.")

@@ -124,9 +124,9 @@ class DQN(rl_agent.AbstractAgent):
                replay_buffer_capacity=128,
                batch_size=128,
                replay_buffer_class=ReplayBuffer,
-               learning_rate=1e-2,
+               learning_rate=5e-4,
                update_target_network_every=1000,
-               learn_every=5,
+               learn_every=10,
                discount_factor=0.5,
                min_buffer_size_to_learn=50,
                epsilon_start=1.0,
@@ -187,6 +187,9 @@ class DQN(rl_agent.AbstractAgent):
           self._q_network.parameters(), lr=learning_rate)
     else:
       raise ValueError("Not implemented, choose from 'adam' and 'sgd'.")
+
+  def set_player_id(self, player_id):
+    self.player_id = player_id
 
   def step(self, time_step, is_evaluation=False, add_transition_record=True):
     """Returns the action to be taken and updates the Q-network if needed.
