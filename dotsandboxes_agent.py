@@ -89,12 +89,12 @@ class Agent(pyspiel.Bot):
             player_id=player_id,
             state_representation_size=info_state_size_trained,
             num_actions=num_actions_trained,
-            hidden_layers_sizes=128,
-            replay_buffer_capacity=128,
-            batch_size=64)
+            hidden_layers_sizes=210,
+            replay_buffer_capacity=150,
+            batch_size=50)
 
         package_directory = os.path.dirname(os.path.abspath(__file__))
-        model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15.pt')
+        model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15_v4.pt')
         self.trained_agent.load(model_file)
 
 
