@@ -24,7 +24,7 @@ from open_spiel.python.algorithms import evaluate_bots
 FLAGS = flags.FLAGS
 
 # Training parameters
-flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_15x15.pt",
+flags.DEFINE_string("checkpoint_dir", "dqn_dnb_model_15x15",
                     "Directory to save/load the agent models.")
 flags.DEFINE_integer(
     "save_every", int(1e3),
@@ -38,7 +38,7 @@ flags.DEFINE_integer(
 # DQN model hyper-parameters
 flags.DEFINE_integer("hidden_layers_sizes", 210,
                   "Number of hidden units in the Q-Network MLP.")
-flags.DEFINE_integer("replay_buffer_capacity", 150,
+flags.DEFINE_integer("replay_buffer_capacity", 1500,
                      "Size of the replay buffer.")
 flags.DEFINE_integer("batch_size", 50,
                      "Number of transitions to sample at each learning step.")
@@ -101,8 +101,8 @@ def main(argv=None):
           r_mean = eval_against_random_bots(env, agents, random_agents, 1000)
           logging.info("[%s] Mean episode rewards %s", ep + 1, r_mean)
         if (ep + 1) % FLAGS.save_every == 0:
-          for agent in agents:
-            agent.save(FLAGS.checkpoint_dir)
+          for i in range(2):
+            agent[i].save(FLAGS.checkpoint_dir + "_" + str(i) + ".pt")
 
         time_step = env.reset()
         while not time_step.last():
@@ -114,11 +114,6 @@ def main(argv=None):
         # Episode is over, step all agents with final info state.
         for agent in agents:
           agent.step(time_step)
-
-        player_id = agents[0].player_id
-        agents[0].set_player_id(agents[1].player_id)
-        agents[1].set_player_id(player_id)
-        agents = agents[::-1]
 
 
 if __name__ == "__main__":

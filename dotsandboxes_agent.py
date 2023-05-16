@@ -92,9 +92,9 @@ class Agent(pyspiel.Bot):
             hidden_layers_sizes=210,
             replay_buffer_capacity=150,
             batch_size=50)
-
+        
         package_directory = os.path.dirname(os.path.abspath(__file__))
-        model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15_v4.pt')
+        model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15' + '_v4' + player_id + '.pt' )
         self.trained_agent.load(model_file)
 
 
@@ -150,6 +150,7 @@ class Agent(pyspiel.Bot):
             self.env_trained.step([trained_agent_output.action])
             self.env.step([self.legal_moves.index(trained_agent_output.action)])
             # print(self.env_trained.get_state)
+            # print(self.env.get_state)
         else:
             # Get legal_actions for real board
             legal_actions_small_board = time_step.observations["legal_actions"][self.player_id]
@@ -217,17 +218,30 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dots_and_boxes(num_rows=7,num_cols=7)")
+        "dots_and_boxes(num_rows=2,num_cols=2)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
-    bots = [get_agent_for_tournament(0), UniformRandomBot(player_id=1, rng=np.random)]
-    returns = evaluate_bots(game.new_initial_state(), bots, np.random)
-    print("-----------------------------------------------")
-    print(returns)
-    assert len(returns) == 2
-    assert isinstance(returns[0], float)
-    assert isinstance(returns[1], float)
-    print("SUCCESS!")
+    for i in range(10):
+        agent0 = get_agent_for_tournament(0)
+        bot1 = UniformRandomBot(player_id=1, rng=np.random)
+        agent1 = get_agent_for_tournament(0)
+        bot0 = UniformRandomBot(player_id=1, rng=np.random)
+        bots = [agent1,bot0]
+        returns = evaluate_bots(game.new_initial_state(), bots, np.random)
+        print("-----------------------------------------------")
+        print(returns)
+        assert len(returns) == 2
+        assert isinstance(returns[0], float)
+        assert isinstance(returns[1], float)
+        print("SUCCESS!")
+        bots = [bot0,agent1]
+        returns = evaluate_bots(game.new_initial_state(), bots, np.random)
+        print("-----------------------------------------------")
+        print(returns)
+        assert len(returns) == 2
+        assert isinstance(returns[0], float)
+        assert isinstance(returns[1], float)
+        print("SUCCESS!")
 
 
 def main(argv=None):
