@@ -188,6 +188,9 @@ class DQN(rl_agent.AbstractAgent):
     else:
       raise ValueError("Not implemented, choose from 'adam' and 'sgd'.")
 
+  def set_player_id(self,player_id):
+    self.player_id = player_id
+    
   def step(self, time_step, is_evaluation=False, add_transition_record=True):
     """Returns the action to be taken and updates the Q-network if needed.
 

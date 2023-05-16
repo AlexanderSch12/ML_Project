@@ -115,6 +115,11 @@ def main(argv=None):
         for agent in agents:
           agent.step(time_step)
 
+        player_id = agents[0].player_id
+        agents[0].set_player_id(agents[1].player_id)
+        agents[1].set_player_id(player_id)
+        agents = agents[::-1]
+
 
 if __name__ == "__main__":
   app.run(main)
