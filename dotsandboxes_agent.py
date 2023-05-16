@@ -94,7 +94,7 @@ class Agent(pyspiel.Bot):
             batch_size=50)
         
         package_directory = os.path.dirname(os.path.abspath(__file__))
-        model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15' + '_v4' + player_id + '.pt' )
+        model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15_' + str(player_id) + '.pt' )
         self.trained_agent.load(model_file)
 
 
@@ -168,16 +168,16 @@ def evaluate_bots(state, bots, rng):
   """Plays bots against each other, returns terminal utility for each bot."""
   for bot in bots:
     bot.restart_at(state)
-  print(state)
+  # print(state)
   while not state.is_terminal():
     current_player = state.current_player()
-    print("Move by player: " + str(current_player))
+    # print("Move by player: " + str(current_player))
     action = bots[current_player].step(state)
     for i, bot in enumerate(bots):
         if i != current_player:
             bot.inform_action(state, current_player, action)
     state.apply_action(action)
-    print(state)
+    # print(state)
   return state.returns()
 
 
@@ -218,15 +218,15 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dots_and_boxes(num_rows=2,num_cols=2)")
+        "dots_and_boxes(num_rows=7,num_cols=7)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
     for i in range(10):
         agent0 = get_agent_for_tournament(0)
         bot1 = UniformRandomBot(player_id=1, rng=np.random)
-        agent1 = get_agent_for_tournament(0)
-        bot0 = UniformRandomBot(player_id=1, rng=np.random)
-        bots = [agent1,bot0]
+        agent1 = get_agent_for_tournament(1)
+        bot0 = UniformRandomBot(player_id=0, rng=np.random)
+        bots = [agent0,bot1]
         returns = evaluate_bots(game.new_initial_state(), bots, np.random)
         print("-----------------------------------------------")
         print(returns)
