@@ -32,13 +32,13 @@ flags.DEFINE_integer(
 flags.DEFINE_integer("num_train_episodes", int(1e6),
                      "Number of training episodes.")
 flags.DEFINE_integer(
-    "eval_every", 100,
+    "eval_every", 250,
     "Episode frequency at which the DQN agents are evaluated.")
 
 # DQN model hyper-parameters
 flags.DEFINE_integer("hidden_layers_sizes", 210,
                   "Number of hidden units in the Q-Network MLP.")
-flags.DEFINE_integer("replay_buffer_capacity", 1500,
+flags.DEFINE_integer("replay_buffer_capacity", 150,
                      "Size of the replay buffer.")
 flags.DEFINE_integer("batch_size", 50,
                      "Number of transitions to sample at each learning step.")
@@ -102,7 +102,7 @@ def main(argv=None):
           logging.info("[%s] Mean episode rewards %s", ep + 1, r_mean)
         if (ep + 1) % FLAGS.save_every == 0:
           for i in range(2):
-            agent[i].save(FLAGS.checkpoint_dir + "_" + str(i) + ".pt")
+            agents[i].save(FLAGS.checkpoint_dir + "_" + str(i) + ".pt")
 
         time_step = env.reset()
         while not time_step.last():

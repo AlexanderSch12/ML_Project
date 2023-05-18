@@ -1,7 +1,52 @@
 import pyspiel
+import time
 from absl import app
+import matplotlib.pyplot as plt
+
+num_rows = 2
+num_cols = 2
+num_boxes = num_rows * num_cols
+num_cells = (num_rows + 1) * (num_cols + 1)
+num_parts = 3
 
 transposition_table = {}
+
+def part2num(part):
+    p = {'h': 0, 'horizontal': 0,  # Who has set the horizontal line (top of cell)
+         'v': 1, 'vertical':   1,  # Who has set the vertical line (left of cell)
+         'c': 2, 'cell':       2}  # Who has won the cell
+    return p.get(part, part)
+
+
+def state2num(state):
+    s = {'e':  0, 'empty':   0,
+         'p1': 1, 'player1': 1,
+         'p2': 2, 'player2': 2}
+    return s.get(state, state)
+
+
+def num2state(state):
+    s = {0: 'empty', 1: 'player1', 2: 'player2'}
+    return s.get(state, state)
+
+
+def get_observation(obs_tensor, state, row, col, part):
+    state = state2num(state)
+    part = part2num(part)
+    idx =   part \
+          + (row * (num_cols + 1) + col) * num_parts  \
+          + state * (num_parts * num_cells)
+    return obs_tensor[idx]
+
+
+def get_observation_state(obs_tensor, row, col, part, as_str=True):
+    is_state = None
+    for state in range(3):
+        if get_observation(obs_tensor, state, row, col, part) == 1.0:
+            is_state = state
+    if as_str:
+        is_state = num2state(is_state)
+    return is_state
 
 def _minimax(state, maximizing_player_id):
     """
@@ -14,8 +59,10 @@ def _minimax(state, maximizing_player_id):
       The optimal value of the sub-game starting in state
     """
 
-    if state.to_string() in transposition_table:
-        return transposition_table[state.to_string()]
+    dbn_str = dbn_string_boxes(state)
+
+    if dbn_str in transposition_table:
+        return transposition_table[dbn_str]
 
     if state.is_terminal():
         return state.player_return(maximizing_player_id)
@@ -29,7 +76,21 @@ def _minimax(state, maximizing_player_id):
 
     values_children = [_minimax(state.child(action), maximizing_player_id) for action in state.legal_actions()]
     optimal_value = selection(values_children)
-    transposition_table[state.to_string()] = optimal_value
+
+    # add state and symmetries to the transposition table
+    transposition_table[dbn_str] = optimal_value
+    transposition_table[mirror_h(dbn_str)] = optimal_value
+    transposition_table[mirror_v(dbn_str)] = optimal_value
+    if num_rows  == num_cols:
+            r1 = rotate_90_degrees(dbn_str)
+            r2 = rotate_90_degrees(r1)
+            r3 = rotate_90_degrees(r2)
+            transposition_table[r1] = optimal_value
+            transposition_table[r2] = optimal_value
+            transposition_table[r3] = optimal_value
+    else:
+        transposition_table[rotate_180_degrees(dbn_str)] = optimal_value
+
     return optimal_value
 
 
@@ -72,19 +133,140 @@ def minimax_search(game,
     
     v = _minimax(
         state.clone(),
-        maximizing_player_id)
+        maximizing_player_id,
+        )
+    
     return v
+
+
+def dbn_string_boxes(state):
+    """Append the score for each cell to the dbn string. No box (0), player 1 box (1), player 2 box (2). Append the current player to the end . Player 1 (0), Player 2 (1).
+    Arguments:
+        state: The current state of the game.
+    Returns:
+        The dbn string appended with the score for each cell and the current player
+    """
+    dbn_str = state.dbn_string()
+    obs_tensor = state.observation_tensor(0)    
+    for row in range(num_rows):
+        for col in range(num_cols):
+            for part in ['c']:
+                obs = get_observation_state(obs_tensor, row, col, part, False)
+                dbn_str += str(obs)
+    dbn_str += str(state.current_player())
+    return dbn_str
+
+
+def rotate_90_degrees(dbn_string):
+    # Split the string into horizontal and vertical edges
+    h_edges = dbn_string[:(num_rows + 1) * num_cols]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes - 1]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes - 1:int(len(dbn_string)) - 1]
+    player = dbn_string[int(len(dbn_string)) - 1:]
+
+    rotated_str = ""
+    # v_edges to h_edges
+    for i in range(int(len(v_edges) / 2)):
+        rotated_str += v_edges[int(len(v_edges) / 2 - 1 - i)]
+        rotated_str += v_edges[int(len(v_edges) - 1 - i)]
+    # h_edges to v_edges
+    for i in range(int(len(h_edges))):
+        if i % 2 != 0:
+            rotated_str += h_edges[i]
+    for i in range(int(len(h_edges))):
+        if i % 2 == 0:
+            rotated_str += h_edges[i]
+    # boxes
+    for i in range(num_cols):
+        for j in range(int(len(boxes))):
+            if (j + 1) % (num_cols) == 0:
+                rotated_str += boxes[j - i]
+    # add player
+    rotated_str += player
+    return rotated_str
+
+
+def rotate_180_degrees(dbn_string):
+    # Split the string into horizontal and vertical edges
+    h_edges = dbn_string[:(num_rows + 1) * num_cols]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes - 1]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes - 1:int(len(dbn_string)) - 1]
+    player = dbn_string[int(len(dbn_string)) - 1:]
+
+    rotated_str = ""
+    # reverse h_edges
+    rotated_str += h_edges[::-1]
+    # reverse v_edges
+    rotated_str += v_edges[::-1]
+    # reverse boxes
+    rotated_str += boxes[::-1]
+    # add player
+    rotated_str += player
+    return rotated_str
+
+def mirror_h(dbn_string):
+    # Split the string into horizontal and vertical edges
+    h_edges = dbn_string[:(num_rows + 1) * num_cols]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes - 1]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes - 1:int(len(dbn_string)) - 1]
+    player = dbn_string[int(len(dbn_string)) - 1:]
+
+    h_mirrored_str = ""
+    # mirror h_edges
+    for i in range(num_rows + 1):
+        for j in range(num_cols):
+            h_mirrored_str += h_edges[(i + 1) * num_cols - j - 1]
+    # mirror v_edges
+    for i in range(num_rows):
+        for j in range(num_cols + 1):
+            h_mirrored_str += v_edges[(i + 1) * (num_cols + 1) - j - 1]
+    # mirror boxes
+    for i in range(num_rows):
+        for j in range(num_cols):
+            h_mirrored_str += boxes[(i + 1) * num_cols - j - 1]
+    # add player
+    h_mirrored_str += player
+    return h_mirrored_str
+
+def mirror_v(dbn_string):
+    # Split the string into horizontal and vertical edges
+    h_edges = dbn_string[:(num_rows + 1) * num_cols]
+    v_edges = dbn_string[(num_rows + 1) * num_cols:int(len(dbn_string)) - num_boxes - 1]
+    boxes = dbn_string[int(len(dbn_string)) - num_boxes - 1:int(len(dbn_string)) - 1]
+    player = dbn_string[int(len(dbn_string)) - 1:]
+
+    v_mirrored_str = ""
+    # mirror h_edges
+    for i in range(num_rows + 1):
+        for j in range(num_cols):
+            v_mirrored_str += h_edges[(num_rows - i) * num_cols + j]
+    # mirror v_edges
+    for i in range(num_rows):
+        for j in range(num_cols + 1):
+            v_mirrored_str += v_edges[(num_rows - i - 1) * (num_cols + 1) + j]
+    # mirror boxes
+    for i in range(num_rows):
+        for j in range(num_cols):
+            v_mirrored_str += boxes[(num_rows - i - 1) * num_cols + j]
+    # add player
+    v_mirrored_str += player
+    return v_mirrored_str
 
 
 def main(_):
     games_list = pyspiel.registered_names()
     assert "dots_and_boxes" in games_list
-    game_string = "dots_and_boxes(num_rows=3,num_cols=2)"
+    game_string = "dots_and_boxes(num_rows=" + str(num_rows) + ",num_cols=" + str(num_cols) + ")"
 
     print("Creating game: {}".format(game_string))
     game = pyspiel.load_game(game_string)
 
+    start = time.time()
     value = minimax_search(game)
+    end = time.time()
+
+    print('time: ' + str((end - start) * 1000) + 'ms')
+    print(str(len(transposition_table)))
 
     if value == 0:
         print("It's a draw")

@@ -89,9 +89,9 @@ class Agent(pyspiel.Bot):
             player_id=player_id,
             state_representation_size=info_state_size_trained,
             num_actions=num_actions_trained,
-            hidden_layers_sizes=210,
+            hidden_layers_sizes=100,
             replay_buffer_capacity=150,
-            batch_size=50)
+            batch_size=55)
         
         package_directory = os.path.dirname(os.path.abspath(__file__))
         model_file = os.path.join(package_directory, 'dqn_dnb_model_15x15_' + str(player_id) + '.pt' )
@@ -108,6 +108,8 @@ class Agent(pyspiel.Bot):
 
         env_configs_trained = {}
         self.env = rl_environment.Environment(self.game, **env_configs_trained)
+        qqq = self.env.observation_spec()["info_state"][0]
+        print(qqq)
         
         self.env_trained.reset()
         self.env.reset()
@@ -171,13 +173,13 @@ def evaluate_bots(state, bots, rng):
   # print(state)
   while not state.is_terminal():
     current_player = state.current_player()
-    # print("Move by player: " + str(current_player))
+    #print("Move by player: " + str(current_player))
     action = bots[current_player].step(state)
     for i, bot in enumerate(bots):
         if i != current_player:
             bot.inform_action(state, current_player, action)
     state.apply_action(action)
-    # print(state)
+    #print(state)
   return state.returns()
 
 
@@ -218,17 +220,19 @@ def test_api_calls():
     tournament. It should not trigger any Exceptions.
     """
     dotsandboxes_game_string = (
-        "dots_and_boxes(num_rows=7,num_cols=7)")
+        "dots_and_boxes(num_rows=15,num_cols=15)")
     game = pyspiel.load_game(dotsandboxes_game_string)
     logger.info("Loading the agents")
-    for i in range(10):
+    wins = 0
+    for i in range(50):
         agent0 = get_agent_for_tournament(0)
         bot1 = UniformRandomBot(player_id=1, rng=np.random)
         agent1 = get_agent_for_tournament(1)
         bot0 = UniformRandomBot(player_id=0, rng=np.random)
         bots = [agent0,bot1]
         returns = evaluate_bots(game.new_initial_state(), bots, np.random)
-        print("-----------------------------------------------")
+        if(returns[0] == 1.0):
+            wins = wins+1
         print(returns)
         assert len(returns) == 2
         assert isinstance(returns[0], float)
@@ -236,12 +240,14 @@ def test_api_calls():
         print("SUCCESS!")
         bots = [bot0,agent1]
         returns = evaluate_bots(game.new_initial_state(), bots, np.random)
-        print("-----------------------------------------------")
+        if(returns[1] == 1.0):
+            wins = wins+1
         print(returns)
         assert len(returns) == 2
         assert isinstance(returns[0], float)
         assert isinstance(returns[1], float)
         print("SUCCESS!")
+    print(wins)
 
 
 def main(argv=None):
